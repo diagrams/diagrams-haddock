@@ -63,12 +63,22 @@ prop_parseDisplayMany c
     left f (Left x)  = Left (f x)
     left _ (Right x) = Right x
 
+-- this is a bit of tomfoolery, if parseDiagramURLs does fail it
+-- probably fails on something very particular and hard to stumble on
+-- by chance.
+prop_parseDiagramURLs_succeeds :: String -> Bool
+prop_parseDiagramURLs_succeeds s
+  = case P.parse parseDiagramURLs "" s of
+      Left _  -> False
+      Right _ -> True
+
 prop_explode_collapse :: Comment -> Bool
 prop_explode_collapse c = c == collapseComment (explodeComment c)
 
 tests =
   [ testProperty "DiagramURL display/parse"      prop_parseDisplay
   , testProperty "CommentWithURLs display/parse" prop_parseDisplayMany
+  , testProperty "parseDiagramURLs succeeds"     prop_parseDiagramURLs_succeeds
   , testProperty "Comment explode/collapse"      prop_explode_collapse
   ]
 
