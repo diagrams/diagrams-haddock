@@ -82,6 +82,9 @@ collapseComment :: CommentWithURLs -> Comment
 collapseComment (CommentWithURLs (Comment b s _) urls)
   = Comment b s (displayDiagramURLs urls)
 
+-- | A @CodeBlock@ represents a portion of a comment which is a valid
+--   code block (set off by > bird tracks).  It also caches the list
+--   of bindings present in the code block.
 data CodeBlock
     = CodeBlock
       { codeBlockCode     :: String
@@ -89,12 +92,17 @@ data CodeBlock
       }
   deriving (Show, Eq)
 
+-- | Given a @String@ representing a code block, i.e. valid Haskell
+--   code with any bird tracks already stripped off, attempt to parse
+--   it, extract the list of bindings present, and construct a
+--   'CodeBlock' value.  If parsing fails, return the error message.
 makeCodeBlock :: String -> Either String CodeBlock
 makeCodeBlock s =
   case HSE.parseFileContentsWithComments defaultParseMode s of
     ParseFailed _ errStr -> Left errStr
     ParseOk (m, cs)      -> Right (CodeBlock (exactPrint m cs) (collectBindings m))
 
+-- | Collect the list of names bound in a module.
 collectBindings :: Module l -> [String]
 collectBindings (Module _ _ _ _ decls) = mapMaybe getBinding decls
 collectBindings _ = []
@@ -109,6 +117,8 @@ getName :: Name l -> String
 getName (Ident _ s)  = s
 getName (Symbol _ s) = s
 
+-- | From a @String@ representing a comment, extract all the code
+--   blocks (consecutive lines beginning with bird tracks).
 extractCodeBlocks :: String -> [CodeBlock]
 extractCodeBlocks
   = rights
@@ -116,8 +126,15 @@ extractCodeBlocks
   . (split . dropBlanks . dropDelims $ whenElt (not . ("> " `isPrefixOf`)))
   . lines
 
+-- XXX FIXME: Need to consider consecutive single-line comments as a
+-- single unit when extracting code blocks
+
+-- | A @ParsedModule@ value contains a haskell-src-exts parsed module,
+--   a list of exploded comments, and a list of code blocks which
+--   contain bindings referenced in diagrams URLs.
 data ParsedModule = ParsedModule (Module SrcSpanInfo) [CommentWithURLs] [CodeBlock]
 
+-- | Turn the contents of a @.hs@ file into a 'ParsedModule'.
 parseModule :: String -> Either String ParsedModule
 parseModule src =
   case HSE.parseFileContentsWithComments defaultParseMode src of
@@ -129,6 +146,7 @@ parseModule src =
           blocks    = filter (any (`S.member` diaNames) . codeBlockBindings) allBlocks
       in  Right $ ParsedModule m cs' blocks
 
+-- | Extract the @String@ part of a @Comment@.
 getComment :: Comment -> String
 getComment (Comment _ _ c) = c
 
