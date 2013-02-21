@@ -1,3 +1,20 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Diagrams.Haddock
+-- Copyright   :  (c) 2013 diagrams-haddock team (see LICENSE)
+-- License     :  BSD-style (see LICENSE)
+-- Maintainer  :  diagrams-discuss@googlegroups.com
+--
+-- Include inline diagrams code in Haddock documentation!  For
+-- example, here is a green circle:
+--
+-- <<dummy#diagram=greenCircle&width=200>>
+--
+-- which was literally produced by this code:
+--
+-- > greenCircle = circle 1 # fc green
+--
+-----------------------------------------------------------------------------
 module Diagrams.Haddock where
 
 import           Control.Applicative hiding ((<|>), many)
