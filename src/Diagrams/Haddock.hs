@@ -230,7 +230,7 @@ compileDiagram cacheDir outputDir code url = do
            (map codeBlockCode code)
            (diagramName url)
            []
-           []
+           [ "Diagrams.Backend.SVG" ]
            (hashedRegenerate (\_ opts -> opts) cacheDir)
 
   case res of
