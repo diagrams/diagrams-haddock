@@ -150,3 +150,5 @@ parseModule src =
 getComment :: Comment -> String
 getComment (Comment _ _ c) = c
 
+compileDiagrams :: FilePath -> ParsedModule -> IO ParsedModule
+compileDiagrams outputDir m = undefined
