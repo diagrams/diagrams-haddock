@@ -217,3 +217,19 @@ compileDiagram cacheDir outputDir code url = do
  where
    mkCached base = cacheDir </> base <.> "svg"
 
+compileComment :: FilePath -> FilePath -> [CodeBlock] -> CommentWithURLs -> IO CommentWithURLs
+compileComment cacheDir outputDir code c = do
+  urls' <-
+    mapM (either
+           (return . Left)
+           ((Right <$>) . compileDiagram cacheDir outputDir code)
+         )
+         (diagramURLs c)
+  return $ c { diagramURLs = urls' }
+
+{-
+compileDiagrams :: FilePath -> FilePath -> ParsedModule -> IO ParsedModule
+compileDiagrams cacheDir outputDir m = do
+  comments' <- mapM compileComment
+-}
+
