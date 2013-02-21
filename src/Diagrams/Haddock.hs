@@ -181,6 +181,10 @@ parseModule src =
 getComment :: Comment -> String
 getComment (Comment _ _ c) = c
 
+-- | Given a directory for cached diagrams and a directory for
+--   outputting final diagrams, and all the relevant code blocks,
+--   compile the diagram referenced by a single URL, returning a new
+--   URL updated to point to the location of the generated diagram.
 compileDiagram :: FilePath -> FilePath -> [CodeBlock] -> DiagramURL -> IO DiagramURL
 compileDiagram cacheDir outputDir code url = do
   createDirectoryIfMissing True outputDir
@@ -217,6 +221,7 @@ compileDiagram cacheDir outputDir code url = do
  where
    mkCached base = cacheDir </> base <.> "svg"
 
+-- | Compile all the diagrams referenced in a single comment.
 compileComment :: FilePath -> FilePath -> [CodeBlock] -> CommentWithURLs -> IO CommentWithURLs
 compileComment cacheDir outputDir code c = do
   urls' <-
@@ -227,6 +232,7 @@ compileComment cacheDir outputDir code c = do
          (diagramURLs c)
   return $ c { diagramURLs = urls' }
 
+-- | Compile all the diagrams referenced in an entire module.
 compileDiagrams :: FilePath -> FilePath -> ParsedModule -> IO ParsedModule
 compileDiagrams cacheDir outputDir m = do
   comments' <- mapM (compileComment cacheDir outputDir (pmCode m))
