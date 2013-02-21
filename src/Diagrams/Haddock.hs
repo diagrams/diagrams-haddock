@@ -8,7 +8,7 @@
 -- Include inline diagrams code in Haddock documentation!  For
 -- example, here is a green circle:
 --
--- <<dummy#diagram=greenCircle&width=200>>
+-- <<greenCircle.svg#diagram=greenCircle&width=200>>
 --
 -- which was literally produced by this code:
 --
