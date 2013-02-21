@@ -85,6 +85,7 @@ data CodeBlock
       { codeBlockCode     :: String
       , codeBlockBindings :: [String]
       }
+  deriving (Show, Eq)
 
 makeCodeBlock :: String -> Either String CodeBlock
 makeCodeBlock s =
