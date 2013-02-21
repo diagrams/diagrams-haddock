@@ -16,7 +16,7 @@ import           Language.Haskell.Exts.Annotated
 import qualified Language.Haskell.Exts.Annotated as HSE
 
 -- | An abstract representation of inline Haddock image URLs with
---   diagrams tags, like @<<URL#diagram=name&width=100>>@.
+--   diagrams tags, like @\<\<URL#diagram=name&width=100\>\>@.
 data DiagramURL = DiagramURL
                   { diagramURL  :: String
                   , diagramName :: String
@@ -24,7 +24,7 @@ data DiagramURL = DiagramURL
                   }
   deriving (Show, Eq)
 
--- | Display a diagram URL in the format @<<URL#diagram=name>>@.
+-- | Display a diagram URL in the format @\<\<URL#diagram=name&key=val&...\>\>@.
 displayDiagramURL :: DiagramURL -> String
 displayDiagramURL d = "<<" ++ diagramURL d ++ "#" ++ opts ++ ">>"
   where
@@ -35,7 +35,7 @@ displayDiagramURL d = "<<" ++ diagramURL d ++ "#" ++ opts ++ ">>"
          $ diagramOpts d
     displayOpt (k,v) = k ++ "=" ++ v
 
--- | Parse things of the form @<<URL#diagram=name&opt=val&...>>@.
+-- | Parse things of the form @\<\<URL#diagram=name&key=val&...\>\>@.
 parseDiagramURL :: Parser DiagramURL
 parseDiagramURL =
   DiagramURL
@@ -43,6 +43,7 @@ parseDiagramURL =
   <*> (char '#' *> string "diagram=" *> many1 (noneOf "&>"))
   <*> ((M.fromList <$> many parseKeyValPair) <* string ">>")
 
+-- | Parse a key/value pair of the form @&key=val@.
 parseKeyValPair :: Parser (String,String)
 parseKeyValPair =
   char '&' *>
@@ -58,7 +59,7 @@ parseDiagramURL' =
 -- | The @CommentWithURLs@ type represents a Haddock comment
 --   potentially containing diagrams URLs, but with the URLs separated
 --   out so they are easy to query and modify; ultimately the whole
---   thing can be turned back into a Comment.
+--   thing can be turned back into a 'Comment'.
 data CommentWithURLs
     = CommentWithURLs
       { originalComment :: Comment
