@@ -227,9 +227,10 @@ compileComment cacheDir outputDir code c = do
          (diagramURLs c)
   return $ c { diagramURLs = urls' }
 
-{-
 compileDiagrams :: FilePath -> FilePath -> ParsedModule -> IO ParsedModule
 compileDiagrams cacheDir outputDir m = do
-  comments' <- mapM compileComment
--}
+  comments' <- mapM (compileComment cacheDir outputDir (pmCode m))
+                    (pmComments m)
+  return $ m { pmComments = comments' }
+
 
