@@ -1,6 +1,7 @@
 module Diagrams.Haddock where
 
 import           Control.Applicative hiding ((<|>), many)
+import qualified Data.ByteString.Lazy as BS
 import           Data.Either
 import           Data.List                  ( isPrefixOf, intercalate )
 import           Data.List.Split            ( split, dropBlanks, dropDelims, whenElt )
@@ -8,12 +9,19 @@ import qualified Data.Map    as M
 import           Data.Maybe                 ( mapMaybe   )
 import           Data.Monoid
 import qualified Data.Set    as S
+import           Data.VectorSpace           ( zeroV )
+import           Language.Haskell.Exts.Annotated
+import qualified Language.Haskell.Exts.Annotated as HSE
+import           System.Directory (createDirectoryIfMissing, copyFile)
+import           System.FilePath
+import           Text.Blaze.Svg.Renderer.Utf8 (renderSvg)
 import           Text.Parsec
 import qualified Text.Parsec as P
 import           Text.Parsec.String
 
-import           Language.Haskell.Exts.Annotated
-import qualified Language.Haskell.Exts.Annotated as HSE
+import           Diagrams.Backend.SVG
+import           Diagrams.Builder
+import           Diagrams.TwoD.Size         ( mkSizeSpec )
 
 -- | An abstract representation of inline Haddock image URLs with
 --   diagrams tags, like @\<\<URL#diagram=name&width=100\>\>@.
@@ -169,5 +177,39 @@ parseModule src =
 getComment :: Comment -> String
 getComment (Comment _ _ c) = c
 
-compileDiagrams :: FilePath -> ParsedModule -> IO ParsedModule
-compileDiagrams outputDir m = undefined
+compileDiagram :: FilePath -> FilePath -> [CodeBlock] -> DiagramURL -> IO DiagramURL
+compileDiagram cacheDir outputDir code url = do
+  createDirectoryIfMissing True outputDir
+  createDirectoryIfMissing True cacheDir
+
+  let outFile = outputDir </> diagramName url <.> "svg"
+
+      w = read <$> M.lookup "width" (diagramOpts url)
+      h = read <$> M.lookup "height" (diagramOpts url)
+
+  res <- buildDiagram
+           SVG
+           zeroV
+           (SVGOptions (mkSizeSpec w h))
+           (map codeBlockCode code)
+           (diagramName url)
+           []
+           []
+           (hashedRegenerate (\_ opts -> opts) cacheDir)
+
+  case res of
+    ParseErr err    -> do putStrLn ("Parse error:")
+                          putStrLn err
+                          return url
+    InterpErr ierr  -> do putStrLn ("Interpreter error:")
+                          putStrLn (ppInterpError ierr)
+                          return url
+    Skipped hash    -> do copyFile (mkCached hash) outFile
+                          return $ url { diagramURL = outFile }
+    OK hash svg     -> do let cached = mkCached hash
+                          BS.writeFile cached (renderSvg svg)
+                          copyFile cached outFile
+                          return $ url { diagramURL = outFile }
+ where
+   mkCached base = cacheDir </> base <.> "svg"
+
