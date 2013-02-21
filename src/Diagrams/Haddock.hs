@@ -19,6 +19,7 @@ module Diagrams.Haddock where
 
 import           Control.Applicative hiding ((<|>), many)
 import qualified Data.ByteString.Lazy as BS
+import           Data.Char                  ( isSpace )
 import           Data.Either
 import           Data.List                  ( isPrefixOf, intercalate )
 import           Data.List.Split            ( split, dropBlanks, dropDelims, whenElt )
@@ -27,8 +28,8 @@ import           Data.Maybe                 ( mapMaybe   )
 import           Data.Monoid
 import qualified Data.Set    as S
 import           Data.VectorSpace           ( zeroV )
-import           Language.Haskell.Exts.Annotated hiding (parseModule)
 import qualified Language.Haskell.Exts.Annotated as HSE
+import           Language.Haskell.Exts.Annotated hiding (parseModule)
 import           System.Directory (createDirectoryIfMissing, copyFile)
 import           System.FilePath
 import qualified System.IO.Strict as Strict
@@ -167,9 +168,12 @@ getName (Symbol _ s) = s
 extractCodeBlocks :: String -> [CodeBlock]
 extractCodeBlocks
   = rights
-  . map (makeCodeBlock . concat . map (drop 2))
-  . (split . dropBlanks . dropDelims $ whenElt (not . ("> " `isPrefixOf`)))
+  . map (makeCodeBlock . concat . map (drop 2 . dropWhile isSpace))
+  . (split . dropBlanks . dropDelims $ whenElt (not . isBird))
   . lines
+  where
+    isBird = ("> " `isPrefixOf`) . dropWhile isSpace
+
 
 -- XXX FIXME: Need to consider consecutive single-line comments as a
 -- single unit when extracting code blocks
