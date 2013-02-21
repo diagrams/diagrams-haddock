@@ -1,28 +1,33 @@
 module Main where
 
-import Control.Applicative
-import Data.Either                          ( rights       )
-import Language.Haskell.Exts.Annotated
-import Test.Framework                       ( defaultMain  )
-import Test.Framework.Providers.QuickCheck2 ( testProperty )
-import Test.QuickCheck
+import           Control.Applicative
+import           Data.Either                          ( rights       )
+import qualified Data.Map as M
+import           Language.Haskell.Exts.Annotated
+import           Test.Framework                       ( defaultMain  )
+import           Test.Framework.Providers.QuickCheck2 ( testProperty )
+import           Test.QuickCheck
 import qualified Text.Parsec as P
 
-import Diagrams.Haddock
+import           Diagrams.Haddock
 
 newtype EString = EString { getEString :: String }
   deriving (Eq, Show)
 instance Arbitrary EString where
   arbitrary = do
     NonEmpty s <- arbitrary
-    if any (`elem` "#<>") s
+    if any (`elem` "#<>&=") s
       then arbitrary
       else return (EString s)
 
+both :: (a -> b) -> (a, a) -> (b, b)
+both g (x,y) = (g x, g y)
+
 instance Arbitrary DiagramURL where
-  arbitrary = DiagramURL <$> s <*> s
+  arbitrary = DiagramURL <$> s <*> s <*> opts
     where
-      s = getEString <$> arbitrary
+      s    = getEString <$> arbitrary
+      opts = (M.fromList . (map . both) getEString) <$> arbitrary
 
 instance Arbitrary SrcSpan where
   arbitrary = do

@@ -2,8 +2,9 @@ module Diagrams.Haddock where
 
 import           Control.Applicative hiding ((<|>), many)
 import           Data.Either
-import           Data.List                  ( isPrefixOf )
+import           Data.List                  ( isPrefixOf, intercalate )
 import           Data.List.Split            ( split, dropBlanks, dropDelims, whenElt )
+import qualified Data.Map    as M
 import           Data.Maybe                 ( mapMaybe   )
 import           Data.Monoid
 import qualified Data.Set    as S
@@ -15,20 +16,37 @@ import           Language.Haskell.Exts.Annotated
 import qualified Language.Haskell.Exts.Annotated as HSE
 
 -- | An abstract representation of inline Haddock image URLs with
---   diagrams tags, like @<<URL#diagram:name>>@.
-data DiagramURL = DiagramURL { diagramURL :: String, diagramName :: String }
+--   diagrams tags, like @<<URL#diagram=name&width=100>>@.
+data DiagramURL = DiagramURL
+                  { diagramURL  :: String
+                  , diagramName :: String
+                  , diagramOpts :: M.Map String String
+                  }
   deriving (Show, Eq)
 
--- | Display a diagram URL in the format @<<URL#diagram:name>>@.
+-- | Display a diagram URL in the format @<<URL#diagram=name>>@.
 displayDiagramURL :: DiagramURL -> String
-displayDiagramURL d = "<<" ++ diagramURL d ++ "#diagram:" ++ diagramName d ++ ">>"
+displayDiagramURL d = "<<" ++ diagramURL d ++ "#" ++ opts ++ ">>"
+  where
+    opts = intercalate "&"
+         . map displayOpt
+         . (("diagram", diagramName d) :)
+         . M.assocs
+         $ diagramOpts d
+    displayOpt (k,v) = k ++ "=" ++ v
 
--- | Parse things of the form @<<URL#diagram:name>>@.
+-- | Parse things of the form @<<URL#diagram=name&opt=val&...>>@.
 parseDiagramURL :: Parser DiagramURL
 parseDiagramURL =
   DiagramURL
   <$> (string "<<" *> many1 (noneOf "#>"))
-  <*> (char '#' *> string "diagram:" *> many1 (noneOf ">") <* string ">>")
+  <*> (char '#' *> string "diagram=" *> many1 (noneOf "&>"))
+  <*> ((M.fromList <$> many parseKeyValPair) <* string ">>")
+
+parseKeyValPair :: Parser (String,String)
+parseKeyValPair =
+  char '&' *>
+  ((,) <$> (many1 (noneOf "&>=") <* char '=') <*> many1 (noneOf "&>="))
 
 -- | Parse a diagram URL /or/ a single character which is not the
 --   start of a diagram URL.
