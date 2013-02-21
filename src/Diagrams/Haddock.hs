@@ -159,7 +159,11 @@ extractCodeBlocks
 -- | A @ParsedModule@ value contains a haskell-src-exts parsed module,
 --   a list of exploded comments, and a list of code blocks which
 --   contain bindings referenced in diagrams URLs.
-data ParsedModule = ParsedModule (Module SrcSpanInfo) [CommentWithURLs] [CodeBlock]
+data ParsedModule = ParsedModule
+                    { pmModule   :: Module SrcSpanInfo
+                    , pmComments :: [CommentWithURLs]
+                    , pmCode     :: [CodeBlock]
+                    }
 
 -- | Turn the contents of a @.hs@ file into a 'ParsedModule'.
 parseModule :: String -> Either String ParsedModule
