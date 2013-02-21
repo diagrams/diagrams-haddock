@@ -1,0 +1,27 @@
+* Identifying diagrams code
+
+  How to identify diagrams code embedded in the documentation?  
+
+  + It's not sufficient to just take all code blocks, since Haddock
+    documentation often contains code blocks.
+
+  + For now we'll just take all code blocks containing bindings of the
+    form
+
+    foo = ...
+
+    where <<blah#diagram:foo>> shows up somewhere.  This can lead to
+    weird clashes too, in the case that some other code happens to
+    have a foo = binding as well; but in that case it's easy enough to
+    just alpha-vary something.
+
+    Note this will still allow writing helper code which can be used
+    in constructing multiple diagrams, since ALL the code blocks will
+    be interpreted together.  One must simply place such helper code
+    in the same code block along with some diagram binding, instead of
+    having it in a separate block.
+
+  + If the above proves awkward it may be worth having a syntax to
+    mark diagrams code blocks; the only catch is that any such syntax
+    will show up in the Haddock output (for code blocks which are
+    intended to be part of the Haddock output).
