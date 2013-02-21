@@ -24,7 +24,7 @@ import           Data.Either
 import           Data.List                  ( isPrefixOf, intercalate )
 import           Data.List.Split            ( split, dropBlanks, dropDelims, whenElt )
 import qualified Data.Map    as M
-import           Data.Maybe                 ( mapMaybe   )
+import           Data.Maybe                 ( mapMaybe )
 import           Data.Monoid
 import qualified Data.Set    as S
 import           Data.VectorSpace           ( zeroV )
