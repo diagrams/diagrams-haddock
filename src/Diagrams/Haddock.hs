@@ -218,7 +218,8 @@ compileDiagram cacheDir outputDir code url = do
   createDirectoryIfMissing True outputDir
   createDirectoryIfMissing True cacheDir
 
-  let outFile = outputDir </> diagramName url <.> "svg"
+  let baseFile = diagramName url <.> "svg"
+      outFile  = outputDir </> baseFile
 
       w = read <$> M.lookup "width" (diagramOpts url)
       h = read <$> M.lookup "height" (diagramOpts url)
@@ -241,11 +242,11 @@ compileDiagram cacheDir outputDir code url = do
                           putStrLn (ppInterpError ierr)
                           return url
     Skipped hash    -> do copyFile (mkCached hash) outFile
-                          return $ url { diagramURL = outFile }
+                          return $ url { diagramURL = baseFile }
     OK hash svg     -> do let cached = mkCached hash
                           BS.writeFile cached (renderSvg svg)
                           copyFile cached outFile
-                          return $ url { diagramURL = outFile }
+                          return $ url { diagramURL = baseFile }
  where
    mkCached base = cacheDir </> base <.> "svg"
 
