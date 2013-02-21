@@ -10,10 +10,11 @@ import           Data.Maybe                 ( mapMaybe   )
 import           Data.Monoid
 import qualified Data.Set    as S
 import           Data.VectorSpace           ( zeroV )
-import           Language.Haskell.Exts.Annotated
+import           Language.Haskell.Exts.Annotated hiding (parseModule)
 import qualified Language.Haskell.Exts.Annotated as HSE
 import           System.Directory (createDirectoryIfMissing, copyFile)
 import           System.FilePath
+import qualified System.IO.Strict as Strict
 import           Text.Blaze.Svg.Renderer.Utf8 (renderSvg)
 import           Text.Parsec
 import qualified Text.Parsec as P
@@ -177,6 +178,10 @@ parseModule src =
           blocks    = filter (any (`S.member` diaNames) . codeBlockBindings) allBlocks
       in  Right $ ParsedModule m cs' blocks
 
+-- | Turn a 'ParsedModule' back into a String.
+displayModule :: ParsedModule -> String
+displayModule (ParsedModule m cs _) = exactPrint m (map collapseComment cs)
+
 -- | Extract the @String@ part of a @Comment@.
 getComment :: Comment -> String
 getComment (Comment _ _ c) = c
@@ -245,4 +250,14 @@ compileDiagrams cacheDir outputDir m = do
                     (pmComments m)
   return $ m { pmComments = comments' }
 
-
+processFile :: FilePath  -- ^ cache directory
+            -> FilePath  -- ^ output directory
+            -> FilePath  -- ^ file to be processed
+            -> IO ()
+processFile cacheDir outputDir file = do
+  src <- Strict.readFile file
+  case parseModule src of
+    Left  err -> putStrLn err   -- XXX FIXME should do something better?
+    Right m   -> do
+      m' <- compileDiagrams cacheDir outputDir m
+      writeFile file (displayModule m')
