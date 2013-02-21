@@ -12,7 +12,7 @@
 --
 -- which was literally produced by this code:
 --
--- > greenCircle = circle 1 # fc green
+-- > greenCircle = circle 1 # fc green # pad 1.1
 --
 -----------------------------------------------------------------------------
 module Diagrams.Haddock where
