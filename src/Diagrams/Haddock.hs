@@ -2,7 +2,9 @@ module Diagrams.Haddock where
 
 import           Control.Applicative hiding ((<|>), many)
 import           Data.Either
-import           Data.Maybe                 ( mapMaybe )
+import           Data.List                  ( isPrefixOf )
+import           Data.List.Split            ( split, dropBlanks, dropDelims, whenElt )
+import           Data.Maybe                 ( mapMaybe   )
 import           Data.Monoid
 import qualified Data.Set    as S
 import           Text.Parsec
@@ -106,4 +108,27 @@ getBinding _                                  = Nothing
 getName :: Name l -> String
 getName (Ident _ s)  = s
 getName (Symbol _ s) = s
+
+extractCodeBlocks :: String -> [CodeBlock]
+extractCodeBlocks
+  = rights
+  . map (makeCodeBlock . concat . map (drop 2))
+  . (split . dropBlanks . dropDelims $ whenElt (not . ("> " `isPrefixOf`)))
+  . lines
+
+data ParsedModule = ParsedModule (Module SrcSpanInfo) [CommentWithURLs] [CodeBlock]
+
+parseModule :: String -> Either String ParsedModule
+parseModule src =
+  case HSE.parseFileContentsWithComments defaultParseMode src of
+    ParseFailed _ errStr -> Left errStr
+    ParseOk (m, cs)      ->
+      let cs'       = map explodeComment cs
+          allBlocks = concatMap extractCodeBlocks . map getComment $ cs
+          diaNames  = S.unions . map getDiagramNames $ cs'
+          blocks    = filter (any (`S.member` diaNames) . codeBlockBindings) allBlocks
+      in  Right $ ParsedModule m cs' blocks
+
+getComment :: Comment -> String
+getComment (Comment _ _ c) = c
 
