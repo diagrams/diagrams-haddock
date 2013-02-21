@@ -98,9 +98,9 @@ data CodeBlock
 --   'CodeBlock' value.  If parsing fails, return the error message.
 makeCodeBlock :: String -> Either String CodeBlock
 makeCodeBlock s =
-  case HSE.parseFileContentsWithComments defaultParseMode s of
+  case HSE.parseFileContents s of
     ParseFailed _ errStr -> Left errStr
-    ParseOk (m, cs)      -> Right (CodeBlock (exactPrint m cs) (collectBindings m))
+    ParseOk m            -> Right (CodeBlock s (collectBindings m))
 
 -- | Collect the list of names bound in a module.
 collectBindings :: Module l -> [String]
