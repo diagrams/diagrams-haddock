@@ -22,7 +22,8 @@ Source-repository head
 library
   exposed-modules:     Diagrams.Haddock
   -- other-modules:       
-  build-depends:       base >= 4.4 && < 4.7, 
+  build-depends:       base >= 4.4 && < 4.7,
+                       containers >= 0.4 && < 0.6,
                        parsec >= 3,
                        haskell-src-exts >= 1.13 && < 1.14
   hs-source-dirs:      src

@@ -1,13 +1,16 @@
 module Diagrams.Haddock where
 
-import Control.Applicative hiding ((<|>), many)
-import Data.Either
-import Data.Monoid
-import Text.Parsec
+import           Control.Applicative hiding ((<|>), many)
+import           Data.Either
+import           Data.Maybe                 ( mapMaybe )
+import           Data.Monoid
+import qualified Data.Set    as S
+import           Text.Parsec
 import qualified Text.Parsec as P
-import Text.Parsec.String
+import           Text.Parsec.String
 
-import Language.Haskell.Exts.Annotated
+import           Language.Haskell.Exts.Annotated
+import qualified Language.Haskell.Exts.Annotated as HSE
 
 -- | An abstract representation of inline Haddock image URLs with
 --   diagrams tags, like @<<URL#diagram:name>>@.
@@ -60,6 +63,10 @@ parseDiagramURLs = condenseLefts <$> many parseDiagramURL'
 displayDiagramURLs :: [Either String DiagramURL] -> String
 displayDiagramURLs = concatMap (either id displayDiagramURL)
 
+-- | Get the names of all diagrams referenced in the given comment.
+getDiagramNames :: CommentWithURLs -> S.Set String
+getDiagramNames = S.fromList . map diagramName . rights . diagramURLs
+
 -- | \"Explode\" the content of a comment to expose the diagram URLs
 --   for easy processing.
 explodeComment :: Comment -> CommentWithURLs
@@ -72,3 +79,30 @@ explodeComment c@(Comment _ _ s) =
 collapseComment :: CommentWithURLs -> Comment
 collapseComment (CommentWithURLs (Comment b s _) urls)
   = Comment b s (displayDiagramURLs urls)
+
+data CodeBlock
+    = CodeBlock
+      { codeBlockCode     :: String
+      , codeBlockBindings :: [String]
+      }
+
+makeCodeBlock :: String -> Either String CodeBlock
+makeCodeBlock s =
+  case HSE.parseFileContentsWithComments defaultParseMode s of
+    ParseFailed _ errStr -> Left errStr
+    ParseOk (m, cs)      -> Right (CodeBlock (exactPrint m cs) (collectBindings m))
+
+collectBindings :: Module l -> [String]
+collectBindings (Module _ _ _ _ decls) = mapMaybe getBinding decls
+collectBindings _ = []
+
+getBinding :: Decl l -> Maybe String
+getBinding (FunBind _ [])                     = Nothing
+getBinding (FunBind _ (Match _ nm _ _ _ : _)) = Just $ getName nm
+getBinding (PatBind _ (PVar _ nm) _ _ _)      = Just $ getName nm
+getBinding _                                  = Nothing
+
+getName :: Name l -> String
+getName (Ident _ s)  = s
+getName (Symbol _ s) = s
+
