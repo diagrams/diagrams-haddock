@@ -1,10 +1,11 @@
 module Diagrams.Haddock where
 
 import Control.Applicative hiding ((<|>), many)
-import Text.Parsec
-import Text.Parsec.String
 import Data.Either
 import Data.Monoid
+import Text.Parsec
+import qualified Text.Parsec as P
+import Text.Parsec.String
 
 import Language.Haskell.Exts.Annotated
 
@@ -34,15 +35,18 @@ parseDiagramURL' =
 -- | The @CommentWithURLs@ type represents a Haddock comment
 --   potentially containing diagrams URLs, but with the URLs separated
 --   out so they are easy to query and modify; ultimately the whole
---   thing can be turned back into a simple String.
-newtype CommentWithURLs
-    = CommentWithURLs { getCommentWithURLs :: [Either String DiagramURL] }
+--   thing can be turned back into a Comment.
+data CommentWithURLs
+    = CommentWithURLs
+      { originalComment :: Comment
+      , diagramURLs     :: [Either String DiagramURL]
+      }
   deriving (Show, Eq)
 
 -- | Decompose a string into a parsed form with explicitly represented
 --   diagram URLs interspersed with other content.
-parseDiagramURLs :: Parser CommentWithURLs
-parseDiagramURLs = (CommentWithURLs . condenseLefts) <$> many parseDiagramURL'
+parseDiagramURLs :: Parser [Either String DiagramURL]
+parseDiagramURLs = condenseLefts <$> many parseDiagramURL'
   where
     condenseLefts :: [Either a b] -> [Either [a] b]
     condenseLefts [] = []
@@ -53,5 +57,18 @@ parseDiagramURLs = (CommentWithURLs . condenseLefts) <$> many parseDiagramURL'
             isLeft _         = False
 
 -- | Serialize a parsed comment with diagram URLs back into a String.
-displayCommentWithURLs :: CommentWithURLs -> String
-displayCommentWithURLs = concatMap (either id displayDiagramURL) . getCommentWithURLs
+displayDiagramURLs :: [Either String DiagramURL] -> String
+displayDiagramURLs = concatMap (either id displayDiagramURL)
+
+-- | \"Explode\" the content of a comment to expose the diagram URLs
+--   for easy processing.
+explodeComment :: Comment -> CommentWithURLs
+explodeComment c@(Comment _ _ s) =
+  case P.parse parseDiagramURLs "" s of
+    Left _     -> error "This case can never happen; see prop_parseDiagramURLs_succeeds"
+    Right urls -> CommentWithURLs c urls
+
+-- | \"Collapse\" a parsed comment back down into a normal comment.
+collapseComment :: CommentWithURLs -> Comment
+collapseComment (CommentWithURLs (Comment b s _) urls)
+  = Comment b s (displayDiagramURLs urls)
