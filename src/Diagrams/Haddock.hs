@@ -12,7 +12,8 @@
 --
 -- which was literally produced by this code:
 --
--- > greenCircle = circle 1 # fc green # pad 1.1
+-- > greenCircle = circle 1
+-- >             # fc green # pad 1.1
 --
 -----------------------------------------------------------------------------
 module Diagrams.Haddock where
@@ -21,7 +22,8 @@ import           Control.Applicative hiding ((<|>), many)
 import qualified Data.ByteString.Lazy as BS
 import           Data.Char                  ( isSpace )
 import           Data.Either
-import           Data.List                  ( isPrefixOf, intercalate )
+import           Data.Function              ( on )
+import           Data.List                  ( isPrefixOf, intercalate, groupBy )
 import           Data.List.Split            ( split, dropBlanks, dropDelims, whenElt )
 import qualified Data.Map    as M
 import           Data.Maybe                 ( mapMaybe )
@@ -174,10 +176,6 @@ extractCodeBlocks
   where
     isBird = ("> " `isPrefixOf`) . dropWhile isSpace
 
-
--- XXX FIXME: Need to consider consecutive single-line comments as a
--- single unit when extracting code blocks
-
 -- | A @ParsedModule@ value contains a haskell-src-exts parsed module,
 --   a list of exploded comments, and a list of code blocks which
 --   contain bindings referenced in diagrams URLs.
@@ -194,7 +192,9 @@ parseModule src =
     ParseFailed _ errStr -> Left errStr
     ParseOk (m, cs)      ->
       let cs'       = map explodeComment cs
-          allBlocks = concatMap extractCodeBlocks . map getComment $ cs
+          allBlocks = concatMap extractCodeBlocks
+                    . coalesceComments
+                    $ cs
           diaNames  = S.unions . map getDiagramNames $ cs'
           blocks    = filter (any (`S.member` diaNames) . codeBlockBindings) allBlocks
       in  Right $ ParsedModule m cs' blocks
@@ -203,9 +203,33 @@ parseModule src =
 displayModule :: ParsedModule -> String
 displayModule (ParsedModule m cs _) = exactPrint m (map collapseComment cs)
 
--- | Extract the @String@ part of a @Comment@.
-getComment :: Comment -> String
-getComment (Comment _ _ c) = c
+-- | Given a series of comments, return a list of their contents,
+--   coalescing blocks of adjacent single-line comments into one String.
+coalesceComments :: [Comment] -> [String]
+coalesceComments
+  = map unlines
+  . (map . map) (getComment . fst)
+  . concatMap (groupBy ((==) `on` snd))
+
+    -- subtract consecutive numbers so runs show up as repeats
+    -- e.g.  L1, L2, L3, L6, L7, L9  -->  0,0,0,2,2,3
+  . map (zipWith (\i c -> (c, commentLine c - i)) [1..])
+
+    -- explode out each multi-line comment into its own singleton list,
+    -- which will be unaffected by the above shenanigans
+  . concatMap (\xs -> if isMultiLine (head xs) then map (:[]) xs else [xs])
+
+    -- group multi + single line comments together
+  . groupBy ((==) `on` isMultiLine)
+
+  where
+    isMultiLine (Comment b _ _) = b
+    getComment  (Comment _ _ c) = c
+    commentLine (Comment _ span _) = srcSpanStartLine span
+
+    -- Argh, I really wish the split package supported splitting on a
+    -- predicate over adjacent elements!  That would make the above
+    -- soooo much easier.
 
 -- | Given a directory for cached diagrams and a directory for
 --   outputting final diagrams, and all the relevant code blocks,
