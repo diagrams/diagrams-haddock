@@ -296,6 +296,11 @@ compileDiagrams cacheDir outputDir m = do
                     (pmComments m)
   return $ m { pmComments = comments' }
 
+-- | Read a file, compile all the referenced diagrams, and update all
+--   the diagram URLs to refer to the proper image files.  Note, this
+--   /overwrites/ the file, so it's recommended to only do this on
+--   files that are under version control, so you can compare the two
+--   versions and roll back if 'processFile' does something horrible.
 processFile :: FilePath  -- ^ cache directory
             -> FilePath  -- ^ output directory
             -> FilePath  -- ^ file to be processed
