@@ -338,6 +338,14 @@ displayModule (ParsedModule m cs _) = exactPrint m (map collapseComment cs)
 --   outputting final diagrams, and all the relevant code blocks,
 --   compile the diagram referenced by a single URL, returning a new
 --   URL updated to point to the location of the generated diagram.
+--
+--   In particular, the diagram will be output to @outDir/name.svg@,
+--   where @outDir@ is the second argument to @compileDiagram@, and
+--   @name@ is the name of the diagram.  The updated URL will refer to
+--   @name.svg@ (/not/ @outDir/name.svg@), under the assumption that
+--   the contents of @outDir@ will be copied into the Haddock output
+--   directory.  If for some reason you would like this scheme to be
+--   more flexible/configurable, just yell.
 compileDiagram :: FilePath   -- ^ cache directory
                -> FilePath   -- ^ output directory
                -> [CodeBlock] -> DiagramURL -> IO DiagramURL
