@@ -93,7 +93,13 @@ import           Diagrams.TwoD.Size         ( mkSizeSpec )
 ------------------------------------------------------------
 
 -- $urls
--- XXX
+-- Haddock supports inline links to images with the syntax
+-- @\<\<URL\>\>@.  To indicate an image which should be automatically
+-- generated from some diagrams code, we use the special syntax
+-- @\<\<URL#diagram=name&key1=val1&key2=val2&...\>\>@.  The point is
+-- that everything following the @#@ will be ignored by browsers, but
+-- we can use it to indicate to diagrams-haddock the name of the
+-- diagram to be rendered along with options such as size.
 
 -- | An abstract representation of inline Haddock image URLs with
 --   diagrams tags, like @\<\<URL#diagram=name&width=100\>\>@.
@@ -158,7 +164,12 @@ displayDiagramURLs = concatMap (either id displayDiagramURL)
 ------------------------------------------------------------
 
 -- $comments
--- XXX
+-- The @haskell-src-exts@ package defines a 'Comment' type for
+-- representing comments.  Here we define a type to represent parsed
+-- comments with explicitly represented diagram URLs
+-- ('explodeComment'), so that the diagram URLs can be easily
+-- extracted ('getDiagramNames') and manipulated before being
+-- serialized back into a 'Comment' ('collapseComment').
 
 -- | The @CommentWithURLs@ type represents a Haddock comment
 --   potentially containing diagrams URLs, but with the URLs separated
@@ -183,13 +194,17 @@ explodeComment c@(Comment _ _ s) =
     Left _     -> error "This case can never happen; see prop_parseDiagramURLs_succeeds"
     Right urls -> CommentWithURLs c urls
 
--- | \"Collapse\" a parsed comment back down into a normal comment.
+-- | \"Collapse\" a parsed comment back down into a normal
+--   comment. Exploding and then collapsing a comment yields the
+--   original comment; that is, @collapseComment . explodeComment ===
+--   id@.
 collapseComment :: CommentWithURLs -> Comment
 collapseComment (CommentWithURLs (Comment b s _) urls)
   = Comment b s (displayDiagramURLs urls)
 
 -- | Given a series of comments, return a list of their contents,
---   coalescing blocks of adjacent single-line comments into one String.
+--   coalescing blocks of adjacent single-line comments into one
+--   String.
 coalesceComments :: [Comment] -> [String]
 coalesceComments
   = map unlines
@@ -221,7 +236,10 @@ coalesceComments
 ------------------------------------------------------------
 
 -- $codeblocks
--- XXX
+-- A code block represents some portion of a comment set off by bird
+-- tracks.  We also collect a list of the names bound in each code
+-- block, in order to decide which code blocks contain expressions
+-- representing diagrams that are to be rendered.
 
 -- | A @CodeBlock@ represents a portion of a comment which is a valid
 --   code block (set off by > bird tracks).  It also caches the list
@@ -274,7 +292,8 @@ extractCodeBlocks
 ------------------------------------------------------------
 
 -- $modules
--- XXX
+-- A representation for parsed modules including their code blocks and
+-- diagram URLs.
 
 -- | A @ParsedModule@ value contains a haskell-src-exts parsed module,
 --   a list of exploded comments, and a list of code blocks which
@@ -308,7 +327,9 @@ displayModule (ParsedModule m cs _) = exactPrint m (map collapseComment cs)
 ------------------------------------------------------------
 
 -- $diagrams
--- XXX
+-- This section contains all the functions which actually interface
+-- with diagrams-builder in order to compile diagrams referenced from
+-- URLs.
 
 -- | Given a directory for cached diagrams and a directory for
 --   outputting final diagrams, and all the relevant code blocks,
