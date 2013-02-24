@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Haddock
@@ -64,6 +65,7 @@ module Diagrams.Haddock
     ) where
 
 import           Control.Applicative             hiding (many, (<|>))
+import           Control.Lens                    hiding ((<.>))
 import qualified Data.ByteString.Lazy            as BS
 import           Data.Char                       (isSpace)
 import           Data.Either                     (lefts, rights)
@@ -107,21 +109,23 @@ import           Diagrams.TwoD.Size              (mkSizeSpec)
 -- | An abstract representation of inline Haddock image URLs with
 --   diagrams tags, like @\<\<URL#diagram=name&width=100\>\>@.
 data DiagramURL = DiagramURL
-                  { diagramURL  :: String
-                  , diagramName :: String
-                  , diagramOpts :: M.Map String String
+                  { _diagramURL  :: String
+                  , _diagramName :: String
+                  , _diagramOpts :: M.Map String String
                   }
   deriving (Show, Eq)
 
+makeLenses ''DiagramURL
+
 -- | Display a diagram URL in the format @\<\<URL#diagram=name&key=val&...\>\>@.
 displayDiagramURL :: DiagramURL -> String
-displayDiagramURL d = "<<" ++ diagramURL d ++ "#" ++ opts ++ ">>"
+displayDiagramURL d = "<<" ++ d ^. diagramURL ++ "#" ++ opts ++ ">>"
   where
     opts = intercalate "&"
          . map displayOpt
-         . (("diagram", diagramName d) :)
+         . (("diagram", d ^. diagramName) :)
          . M.assocs
-         $ diagramOpts d
+         $ d ^. diagramOpts
     displayOpt (k,v) = k ++ "=" ++ v
 
 -- | Parse things of the form @\<\<URL#diagram=name&key=val&...\>\>@.
@@ -180,14 +184,16 @@ displayDiagramURLs = concatMap (either id displayDiagramURL)
 --   thing can be turned back into a 'Comment'.
 data CommentWithURLs
     = CommentWithURLs
-      { originalComment :: Comment
-      , diagramURLs     :: [Either String DiagramURL]
+      { _originalComment :: Comment
+      , _diagramURLs     :: [Either String DiagramURL]
       }
   deriving (Show, Eq)
 
+makeLenses ''CommentWithURLs
+
 -- | Get the names of all diagrams referenced in the given comment.
 getDiagramNames :: CommentWithURLs -> S.Set String
-getDiagramNames = S.fromList . map diagramName . rights . diagramURLs
+getDiagramNames = S.fromList . map (view diagramName) . rights . view diagramURLs
 
 -- | \"Explode\" the content of a comment to expose the diagram URLs
 --   for easy processing.
@@ -249,10 +255,12 @@ coalesceComments
 --   of bindings present in the code block.
 data CodeBlock
     = CodeBlock
-      { codeBlockCode     :: String
-      , codeBlockBindings :: [String]
+      { _codeBlockCode     :: String
+      , _codeBlockBindings :: [String]
       }
   deriving (Show, Eq)
+
+makeLenses ''CodeBlock
 
 -- | Given a @String@ representing a code block, /i.e./ valid Haskell
 --   code with any bird tracks already stripped off, attempt to parse
@@ -302,10 +310,12 @@ extractCodeBlocks
 --   a list of exploded comments, and a list of code blocks which
 --   contain bindings referenced in diagrams URLs.
 data ParsedModule = ParsedModule
-                    { pmModule   :: Module SrcSpanInfo
-                    , pmComments :: [CommentWithURLs]
-                    , pmCode     :: [CodeBlock]
+                    { _pmModule   :: Module SrcSpanInfo
+                    , _pmComments :: [CommentWithURLs]
+                    , _pmCode     :: [CodeBlock]
                     }
+
+makeLenses ''ParsedModule
 
 -- | Turn the contents of a @.hs@ file into a 'ParsedModule'.
 parseModule :: String -> Either String ParsedModule
@@ -318,7 +328,8 @@ parseModule src =
                     . coalesceComments
                     $ cs
           diaNames  = S.unions . map getDiagramNames $ cs'
-          blocks    = filter (any (`S.member` diaNames) . codeBlockBindings) allBlocks
+          blocks    = filter (any (`S.member` diaNames) . view codeBlockBindings)
+                             allBlocks
       in  Right $ ParsedModule m cs' blocks
 
 -- | Turn a 'ParsedModule' back into a String.
@@ -353,18 +364,18 @@ compileDiagram cacheDir outputDir code url = do
   createDirectoryIfMissing True outputDir
   createDirectoryIfMissing True cacheDir
 
-  let baseFile = diagramName url <.> "svg"
+  let baseFile = (url ^. diagramName) <.> "svg"
       outFile  = outputDir </> baseFile
 
-      w = read <$> M.lookup "width" (diagramOpts url)
-      h = read <$> M.lookup "height" (diagramOpts url)
+      w = read <$> M.lookup "width" (url ^. diagramOpts)
+      h = read <$> M.lookup "height" (url ^. diagramOpts)
 
   res <- buildDiagram
            SVG
            zeroV
            (SVGOptions (mkSizeSpec w h))
-           (map codeBlockCode code)
-           (diagramName url)
+           (map (view codeBlockCode) code)
+           (url ^. diagramName)
            []
            [ "Diagrams.Backend.SVG" ]
            (hashedRegenerate (\_ opts -> opts) cacheDir)
@@ -377,11 +388,11 @@ compileDiagram cacheDir outputDir code url = do
                           putStrLn (ppInterpError ierr)
                           return url
     Skipped hash    -> do copyFile (mkCached hash) outFile
-                          return $ url { diagramURL = baseFile }
+                          return $ url & diagramURL .~ baseFile
     OK hash svg     -> do let cached = mkCached hash
                           BS.writeFile cached (renderSvg svg)
                           copyFile cached outFile
-                          return $ url { diagramURL = baseFile }
+                          return $ url & diagramURL .~ baseFile
  where
    mkCached base = cacheDir </> base <.> "svg"
 
@@ -389,23 +400,19 @@ compileDiagram cacheDir outputDir code url = do
 compileComment :: FilePath  -- ^ cache directory
                -> FilePath  -- ^ output directory
                -> [CodeBlock] -> CommentWithURLs -> IO CommentWithURLs
-compileComment cacheDir outputDir code c = do
-  urls' <-
-    mapM (either
-           (return . Left)
-           ((Right <$>) . compileDiagram cacheDir outputDir code)
-         )
-         (diagramURLs c)
-  return $ c { diagramURLs = urls' }
+compileComment cacheDir outputDir code =
+  (diagramURLs . traverse) %%~
+    (either
+      (return . Left)
+      ((Right <$>) . compileDiagram cacheDir outputDir code)
+    )
 
 -- | Compile all the diagrams referenced in an entire module.
 compileDiagrams :: FilePath  -- ^ cache directory
                 -> FilePath  -- ^ output directory
                 -> ParsedModule -> IO ParsedModule
-compileDiagrams cacheDir outputDir m = do
-  comments' <- mapM (compileComment cacheDir outputDir (pmCode m))
-                    (pmComments m)
-  return $ m { pmComments = comments' }
+compileDiagrams cacheDir outputDir m =
+  m & (pmComments . traverse) %%~ (compileComment cacheDir outputDir (m^.pmCode))
 
 -- Failed attempt at using lens:
 --  m & mapMOf (pmComments . mapped) (compileComment cacheDir outputDir (m^.pmCode))
