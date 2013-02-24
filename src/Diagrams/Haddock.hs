@@ -16,7 +16,52 @@
 -- >             # fc green # pad 1.1
 --
 -----------------------------------------------------------------------------
-module Diagrams.Haddock where
+module Diagrams.Haddock
+    ( -- * Diagram URLs
+      -- $urls
+
+      DiagramURL(..)
+    , displayDiagramURL
+    , parseDiagramURL
+    , parseKeyValPair
+    , maybeParseDiagramURL
+
+    , parseDiagramURLs
+    , displayDiagramURLs
+
+      -- * Comments
+      -- $comments
+
+    , CommentWithURLs(..)
+    , getDiagramNames
+    , explodeComment
+    , collapseComment
+    , coalesceComments
+
+      -- * Code blocks
+      -- $codeblocks
+
+    , CodeBlock(..)
+    , makeCodeBlock
+    , collectBindings
+    , extractCodeBlocks
+
+      -- * Modules
+      -- $modules
+
+    , ParsedModule(..)
+    , parseModule
+    , displayModule
+
+      -- * Diagram compilation
+      -- $diagrams
+
+    , compileDiagram
+    , compileComment
+    , compileDiagrams
+    , processHaddockDiagrams
+
+    ) where
 
 import           Control.Applicative hiding ((<|>), many)
 import qualified Data.ByteString.Lazy as BS
@@ -43,6 +88,13 @@ import           Text.Parsec.String
 import           Diagrams.Backend.SVG
 import           Diagrams.Builder
 import           Diagrams.TwoD.Size         ( mkSizeSpec )
+
+------------------------------------------------------------
+-- Diagram URLs
+------------------------------------------------------------
+
+-- $urls
+-- XXX
 
 -- | An abstract representation of inline Haddock image URLs with
 --   diagrams tags, like @\<\<URL#diagram=name&width=100\>\>@.
@@ -80,26 +132,15 @@ parseKeyValPair =
 
 -- | Parse a diagram URL /or/ a single character which is not the
 --   start of a diagram URL.
-parseDiagramURL' :: Parser (Either Char DiagramURL)
-parseDiagramURL' =
+maybeParseDiagramURL :: Parser (Either Char DiagramURL)
+maybeParseDiagramURL =
       Right <$> try parseDiagramURL
   <|> Left  <$> anyChar
-
--- | The @CommentWithURLs@ type represents a Haddock comment
---   potentially containing diagrams URLs, but with the URLs separated
---   out so they are easy to query and modify; ultimately the whole
---   thing can be turned back into a 'Comment'.
-data CommentWithURLs
-    = CommentWithURLs
-      { originalComment :: Comment
-      , diagramURLs     :: [Either String DiagramURL]
-      }
-  deriving (Show, Eq)
 
 -- | Decompose a string into a parsed form with explicitly represented
 --   diagram URLs interspersed with other content.
 parseDiagramURLs :: Parser [Either String DiagramURL]
-parseDiagramURLs = condenseLefts <$> many parseDiagramURL'
+parseDiagramURLs = condenseLefts <$> many maybeParseDiagramURL
   where
     condenseLefts :: [Either a b] -> [Either [a] b]
     condenseLefts [] = []
@@ -112,6 +153,24 @@ parseDiagramURLs = condenseLefts <$> many parseDiagramURL'
 -- | Serialize a parsed comment with diagram URLs back into a String.
 displayDiagramURLs :: [Either String DiagramURL] -> String
 displayDiagramURLs = concatMap (either id displayDiagramURL)
+
+------------------------------------------------------------
+-- Comments
+------------------------------------------------------------
+
+-- $comments
+-- XXX
+
+-- | The @CommentWithURLs@ type represents a Haddock comment
+--   potentially containing diagrams URLs, but with the URLs separated
+--   out so they are easy to query and modify; ultimately the whole
+--   thing can be turned back into a 'Comment'.
+data CommentWithURLs
+    = CommentWithURLs
+      { originalComment :: Comment
+      , diagramURLs     :: [Either String DiagramURL]
+      }
+  deriving (Show, Eq)
 
 -- | Get the names of all diagrams referenced in the given comment.
 getDiagramNames :: CommentWithURLs -> S.Set String
@@ -130,6 +189,41 @@ collapseComment :: CommentWithURLs -> Comment
 collapseComment (CommentWithURLs (Comment b s _) urls)
   = Comment b s (displayDiagramURLs urls)
 
+-- | Given a series of comments, return a list of their contents,
+--   coalescing blocks of adjacent single-line comments into one String.
+coalesceComments :: [Comment] -> [String]
+coalesceComments
+  = map unlines
+  . (map . map) (getComment . fst)
+  . concatMap (groupBy ((==) `on` snd))
+
+    -- subtract consecutive numbers so runs show up as repeats
+    -- e.g.  L1, L2, L3, L6, L7, L9  -->  0,0,0,2,2,3
+  . map (zipWith (\i c -> (c, commentLine c - i)) [1..])
+
+    -- explode out each multi-line comment into its own singleton list,
+    -- which will be unaffected by the above shenanigans
+  . concatMap (\xs -> if isMultiLine (head xs) then map (:[]) xs else [xs])
+
+    -- group multi + single line comments together
+  . groupBy ((==) `on` isMultiLine)
+
+  where
+    isMultiLine (Comment b _ _) = b
+    getComment  (Comment _ _ c) = c
+    commentLine (Comment _ span _) = srcSpanStartLine span
+
+    -- Argh, I really wish the split package supported splitting on a
+    -- predicate over adjacent elements!  That would make the above
+    -- soooo much easier.
+
+------------------------------------------------------------
+-- Code blocks
+------------------------------------------------------------
+
+-- $codeblocks
+-- XXX
+
 -- | A @CodeBlock@ represents a portion of a comment which is a valid
 --   code block (set off by > bird tracks).  It also caches the list
 --   of bindings present in the code block.
@@ -140,7 +234,7 @@ data CodeBlock
       }
   deriving (Show, Eq)
 
--- | Given a @String@ representing a code block, i.e. valid Haskell
+-- | Given a @String@ representing a code block, /i.e./ valid Haskell
 --   code with any bird tracks already stripped off, attempt to parse
 --   it, extract the list of bindings present, and construct a
 --   'CodeBlock' value.  If parsing fails, return the error message.
@@ -176,6 +270,13 @@ extractCodeBlocks
   where
     isBird = ("> " `isPrefixOf`) . dropWhile isSpace
 
+------------------------------------------------------------
+-- Modules
+------------------------------------------------------------
+
+-- $modules
+-- XXX
+
 -- | A @ParsedModule@ value contains a haskell-src-exts parsed module,
 --   a list of exploded comments, and a list of code blocks which
 --   contain bindings referenced in diagrams URLs.
@@ -203,33 +304,12 @@ parseModule src =
 displayModule :: ParsedModule -> String
 displayModule (ParsedModule m cs _) = exactPrint m (map collapseComment cs)
 
--- | Given a series of comments, return a list of their contents,
---   coalescing blocks of adjacent single-line comments into one String.
-coalesceComments :: [Comment] -> [String]
-coalesceComments
-  = map unlines
-  . (map . map) (getComment . fst)
-  . concatMap (groupBy ((==) `on` snd))
+------------------------------------------------------------
+-- Diagrams
+------------------------------------------------------------
 
-    -- subtract consecutive numbers so runs show up as repeats
-    -- e.g.  L1, L2, L3, L6, L7, L9  -->  0,0,0,2,2,3
-  . map (zipWith (\i c -> (c, commentLine c - i)) [1..])
-
-    -- explode out each multi-line comment into its own singleton list,
-    -- which will be unaffected by the above shenanigans
-  . concatMap (\xs -> if isMultiLine (head xs) then map (:[]) xs else [xs])
-
-    -- group multi + single line comments together
-  . groupBy ((==) `on` isMultiLine)
-
-  where
-    isMultiLine (Comment b _ _) = b
-    getComment  (Comment _ _ c) = c
-    commentLine (Comment _ span _) = srcSpanStartLine span
-
-    -- Argh, I really wish the split package supported splitting on a
-    -- predicate over adjacent elements!  That would make the above
-    -- soooo much easier.
+-- $diagrams
+-- XXX
 
 -- | Given a directory for cached diagrams and a directory for
 --   outputting final diagrams, and all the relevant code blocks,
@@ -300,12 +380,14 @@ compileDiagrams cacheDir outputDir m = do
 --   the diagram URLs to refer to the proper image files.  Note, this
 --   /overwrites/ the file, so it's recommended to only do this on
 --   files that are under version control, so you can compare the two
---   versions and roll back if 'processFile' does something horrible.
-processFile :: FilePath  -- ^ cache directory
-            -> FilePath  -- ^ output directory
-            -> FilePath  -- ^ file to be processed
-            -> IO ()
-processFile cacheDir outputDir file = do
+--   versions and roll back if 'processHaddockDiagrams' does something
+--   horrible.
+processHaddockDiagrams
+  :: FilePath  -- ^ cache directory
+  -> FilePath  -- ^ output directory
+  -> FilePath  -- ^ file to be processed
+  -> IO ()
+processHaddockDiagrams cacheDir outputDir file = do
   src <- Strict.readFile file
   case parseModule src of
     Left  err -> putStrLn err   -- XXX FIXME should do something better?
