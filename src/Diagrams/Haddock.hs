@@ -66,26 +66,25 @@ module Diagrams.Haddock
 import           Control.Applicative hiding ((<|>), many)
 import qualified Data.ByteString.Lazy as BS
 import           Data.Char                  ( isSpace )
-import           Data.Either
+import           Data.Either                ( lefts, rights )
 import           Data.Function              ( on )
 import           Data.List                  ( isPrefixOf, intercalate, groupBy )
 import           Data.List.Split            ( split, dropBlanks, dropDelims, whenElt )
 import qualified Data.Map    as M
 import           Data.Maybe                 ( mapMaybe )
-import           Data.Monoid
 import qualified Data.Set    as S
 import           Data.VectorSpace           ( zeroV )
 import qualified Language.Haskell.Exts.Annotated as HSE
 import           Language.Haskell.Exts.Annotated hiding (parseModule)
-import           System.Directory (createDirectoryIfMissing, copyFile)
-import           System.FilePath
+import           System.Directory           ( createDirectoryIfMissing, copyFile )
+import           System.FilePath            ( (<.>), (</>) )
 import qualified System.IO.Strict as Strict
 import           Text.Blaze.Svg.Renderer.Utf8 (renderSvg)
 import           Text.Parsec
 import qualified Text.Parsec as P
 import           Text.Parsec.String
 
-import           Diagrams.Backend.SVG
+import           Diagrams.Backend.SVG       ( SVG(..), Options(..) )
 import           Diagrams.Builder
 import           Diagrams.TwoD.Size         ( mkSizeSpec )
 
