@@ -63,30 +63,33 @@ module Diagrams.Haddock
 
     ) where
 
-import           Control.Applicative hiding ((<|>), many)
-import qualified Data.ByteString.Lazy as BS
-import           Data.Char                  ( isSpace )
-import           Data.Either                ( lefts, rights )
-import           Data.Function              ( on )
-import           Data.List                  ( isPrefixOf, intercalate, groupBy )
-import           Data.List.Split            ( split, dropBlanks, dropDelims, whenElt )
-import qualified Data.Map    as M
-import           Data.Maybe                 ( mapMaybe )
-import qualified Data.Set    as S
-import           Data.VectorSpace           ( zeroV )
-import qualified Language.Haskell.Exts.Annotated as HSE
+import           Control.Applicative             hiding (many, (<|>))
+import qualified Data.ByteString.Lazy            as BS
+import           Data.Char                       (isSpace)
+import           Data.Either                     (lefts, rights)
+import           Data.Function                   (on)
+import           Data.List                       (groupBy, intercalate,
+                                                  isPrefixOf)
+import           Data.List.Split                 (dropBlanks, dropDelims, split,
+                                                  whenElt)
+import qualified Data.Map                        as M
+import           Data.Maybe                      (mapMaybe)
+import qualified Data.Set                        as S
+import           Data.VectorSpace                (zeroV)
 import           Language.Haskell.Exts.Annotated hiding (parseModule)
-import           System.Directory           ( createDirectoryIfMissing, copyFile )
-import           System.FilePath            ( (<.>), (</>) )
-import qualified System.IO.Strict as Strict
-import           Text.Blaze.Svg.Renderer.Utf8 (renderSvg)
+import qualified Language.Haskell.Exts.Annotated as HSE
+import           System.Directory                (copyFile,
+                                                  createDirectoryIfMissing)
+import           System.FilePath                 ((<.>), (</>))
+import qualified System.IO.Strict                as Strict
+import           Text.Blaze.Svg.Renderer.Utf8    (renderSvg)
 import           Text.Parsec
-import qualified Text.Parsec as P
+import qualified Text.Parsec                     as P
 import           Text.Parsec.String
 
-import           Diagrams.Backend.SVG       ( SVG(..), Options(..) )
+import           Diagrams.Backend.SVG            (Options (..), SVG (..))
 import           Diagrams.Builder
-import           Diagrams.TwoD.Size         ( mkSizeSpec )
+import           Diagrams.TwoD.Size              (mkSizeSpec)
 
 ------------------------------------------------------------
 -- Diagram URLs
