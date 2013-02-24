@@ -399,6 +399,9 @@ compileDiagrams cacheDir outputDir m = do
                     (pmComments m)
   return $ m { pmComments = comments' }
 
+-- Failed attempt at using lens:
+--  m & mapMOf (pmComments . mapped) (compileComment cacheDir outputDir (m^.pmCode))
+
 -- | Read a file, compile all the referenced diagrams, and update all
 --   the diagram URLs to refer to the proper image files.  Note, this
 --   /overwrites/ the file, so it's recommended to only do this on
