@@ -79,6 +79,7 @@ contain a binding** referenced in a diagram URL.  For example:
 -- <<dummy#diagram=algoIllustration&width=400>>
 --
 -- > algoIllustration = ...
+```
 
 The first code block shown above (beginnin `rep = ...`) contains some
 bindings, but none of those bindings are referenced by any diagram
