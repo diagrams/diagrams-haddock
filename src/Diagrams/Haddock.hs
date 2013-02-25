@@ -292,7 +292,7 @@ getName (Symbol _ s) = s
 extractCodeBlocks :: String -> [CodeBlock]
 extractCodeBlocks
   = rights
-  . map (makeCodeBlock . concat . map (drop 2 . dropWhile isSpace))
+  . map (makeCodeBlock . unlines . map (drop 2 . dropWhile isSpace))
   . (split . dropBlanks . dropDelims $ whenElt (not . isBird))
   . lines
   where
