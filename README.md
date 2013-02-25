@@ -81,7 +81,7 @@ contain a binding** referenced in a diagram URL.  For example:
 -- > algoIllustration = ...
 ```
 
-The first code block shown above (beginnin `rep = ...`) contains some
+The first code block shown above (beginning `rep = ...`) contains some
 bindings, but none of those bindings are referenced by any diagram
 URLs, so the code block is not considered when generating diagrams.
 
