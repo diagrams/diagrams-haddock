@@ -43,7 +43,10 @@ diagramsHaddockOpts
        , "the names of directories containing Cabal packages.  If no arguments"
        , "are given it assumes the current directory is a Cabal package."
        , ""
-       , "For more detailed help, see XXX"
+       , "For more detailed help, including details of how to create source files"
+       , "for diagrams-haddock to process, consult the README at"
+       , ""
+       , "    http://github.com/diagrams/diagrams-haddock/"
        ])
 
 main :: IO ()
