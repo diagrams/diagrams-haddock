@@ -66,6 +66,7 @@ module Diagrams.Haddock
 
 import           Control.Applicative             hiding (many, (<|>))
 import           Control.Lens                    hiding ((<.>))
+import           Control.Monad                   (when)
 import qualified Data.ByteString.Lazy            as BS
 import           Data.Char                       (isSpace)
 import           Data.Either                     (lefts, rights)
@@ -434,4 +435,6 @@ processHaddockDiagrams cacheDir outputDir file = do
     Left  err -> putStrLn err   -- XXX FIXME should do something better?
     Right m   -> do
       m' <- compileDiagrams cacheDir outputDir m
-      writeFile file (displayModule m')
+      let src' = displayModule m'
+      when (src /= src') $
+        writeFile file src'
