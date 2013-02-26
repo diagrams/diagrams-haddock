@@ -438,5 +438,24 @@ processHaddockDiagrams cacheDir outputDir file = do
     Right m   -> do
       m' <- compileDiagrams cacheDir outputDir m
       let src' = displayModule m'
-      when (src /= src') $
-        writeFile file src'
+      when (nonTrivialDiff src src') $
+        writeFile file (addTrailingNL src')
+
+-- haskell-src-exts drops trailing whitespace, so make sure we don't
+-- write out a new file just because of some trailing whitespace
+-- differences.
+nonTrivialDiff :: String -> String -> Bool
+nonTrivialDiff = ((not . and) .: zipWith equalUpToTrailingWS) `on` lines
+  where
+    (.:) = (.) . (.)
+    equalUpToTrailingWS str1 str2
+      =  all isSpace (drop (length str1) str2)
+      && all isSpace (drop (length str2) str1)
+
+-- Even if we did make some nontrivial changes, add a trailing newline
+-- as is standard.
+addTrailingNL :: String -> String
+addTrailingNL [] = []
+addTrailingNL xs
+  | last xs /= '\n' = xs ++ "\n"
+  | otherwise       = xs
