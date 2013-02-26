@@ -321,7 +321,7 @@ makeLenses ''ParsedModule
 -- | Turn the contents of a @.hs@ file into a 'ParsedModule'.
 parseModule :: String -> Either String ParsedModule
 parseModule src =
-  case HSE.parseFileContentsWithComments defaultParseMode src of
+  case HSE.parseFileContentsWithComments parseMode src of
     ParseFailed _ errStr -> Left errStr
     ParseOk (m, cs)      ->
       let cs'       = map explodeComment cs
@@ -332,6 +332,8 @@ parseModule src =
           blocks    = filter (any (`S.member` diaNames) . view codeBlockBindings)
                              allBlocks
       in  Right $ ParsedModule m cs' blocks
+  where
+    parseMode = defaultParseMode { fixities = Just baseFixities }
 
 -- | Turn a 'ParsedModule' back into a String.
 displayModule :: ParsedModule -> String
