@@ -283,6 +283,10 @@ data CodeBlock
 
 makeLenses ''CodeBlock
 
+-- XXX need to pass more info to makeCodeBlock so we can give a better
+-- error message: name of file being processed, and location of the
+-- code block within that file
+
 -- | Given a @String@ representing a code block, /i.e./ valid Haskell
 --   code with any bird tracks already stripped off, attempt to parse
 --   it, extract the list of bindings present, and construct a
