@@ -458,9 +458,6 @@ compileDiagrams :: FilePath  -- ^ cache directory
 compileDiagrams cacheDir outputDir m =
   m & (pmComments . traverse) %%~ (compileComment cacheDir outputDir (m^.pmCode))
 
--- Failed attempt at using lens:
---  m & mapMOf (pmComments . mapped) (compileComment cacheDir outputDir (m^.pmCode))
-
 -- | Read a file, compile all the referenced diagrams, and update all
 --   the diagram URLs to refer to the proper image files.  Note, this
 --   /overwrites/ the file, so it's recommended to only do this on
