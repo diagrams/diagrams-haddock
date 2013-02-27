@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell            #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Haddock
@@ -67,22 +68,25 @@ module Diagrams.Haddock
 import           Control.Applicative             hiding (many, (<|>))
 import           Control.Lens                    hiding ((<.>))
 import           Control.Monad                   (when)
+import           Control.Monad.Writer
 import qualified Data.ByteString.Lazy            as BS
 import           Data.Char                       (isSpace)
-import           Data.Either                     (lefts, rights)
+import           Data.Either                     (lefts, partitionEithers,
+                                                  rights)
 import           Data.Function                   (on)
 import           Data.List                       (groupBy, intercalate,
                                                   isPrefixOf)
 import           Data.List.Split                 (dropBlanks, dropDelims, split,
                                                   whenElt)
 import qualified Data.Map                        as M
-import           Data.Maybe                      (mapMaybe)
+import           Data.Maybe                      (catMaybes, mapMaybe)
 import qualified Data.Set                        as S
 import           Data.VectorSpace                (zeroV)
 import           Language.Haskell.Exts.Annotated hiding (parseModule)
 import qualified Language.Haskell.Exts.Annotated as HSE
 import           System.Directory                (copyFile,
-                                                  createDirectoryIfMissing)
+                                                  createDirectoryIfMissing,
+                                                  doesFileExist)
 import           System.FilePath                 ((<.>), (</>))
 import qualified System.IO.Strict                as Strict
 import           Text.Blaze.Svg.Renderer.Utf8    (renderSvg)
@@ -93,6 +97,22 @@ import           Text.Parsec.String
 import           Diagrams.Backend.SVG            (Options (..), SVG (..))
 import           Diagrams.Builder
 import           Diagrams.TwoD.Size              (mkSizeSpec)
+
+------------------------------------------------------------
+-- Utilities
+------------------------------------------------------------
+
+showParseFailure :: SrcLoc -> String -> String
+showParseFailure loc err = unlines [ prettyPrint loc, err ]
+
+newtype CollectErrors a = CE { unCE :: Writer [String] a }
+  deriving (Functor, Applicative, Monad, MonadWriter [String])
+
+failWith :: String -> CollectErrors (Maybe a)
+failWith err = tell [err] >> return Nothing
+
+runCE :: CollectErrors a -> (a, [String])
+runCE = runWriter . unCE
 
 ------------------------------------------------------------
 -- Diagram URLs
@@ -266,12 +286,28 @@ makeLenses ''CodeBlock
 -- | Given a @String@ representing a code block, /i.e./ valid Haskell
 --   code with any bird tracks already stripped off, attempt to parse
 --   it, extract the list of bindings present, and construct a
---   'CodeBlock' value.  If parsing fails, return the error message.
-makeCodeBlock :: String -> Either String CodeBlock
+--   'CodeBlock' value.
+makeCodeBlock :: String -> CollectErrors (Maybe CodeBlock)
 makeCodeBlock s =
-  case HSE.parseFileContents s of
-    ParseFailed _ errStr -> Left errStr
-    ParseOk m            -> Right (CodeBlock s (collectBindings m))
+  case HSE.parseFileContentsWithMode parseMode s of
+    ParseOk m           -> return . Just $ CodeBlock s (collectBindings m)
+    ParseFailed loc err -> failWith . unlines $
+      [ "Warning: could not parse code block:" ]
+      ++
+      showBlock s
+      ++
+      [ "Error was:" ]
+      ++
+      (indent 2 . lines $ showParseFailure loc err)
+  where
+    parseMode = defaultParseMode
+                { fixities = Nothing }
+    indent n  = map (replicate n ' ' ++)
+    showBlock b
+      | length ls > 5 = indent 2 (take 4 ls ++ ["..."])
+      | otherwise     = indent 2 ls
+      where ls = lines b
+
 
 -- | Collect the list of names bound in a module.
 collectBindings :: Module l -> [String]
@@ -289,11 +325,12 @@ getName (Ident _ s)  = s
 getName (Symbol _ s) = s
 
 -- | From a @String@ representing a comment, extract all the code
---   blocks (consecutive lines beginning with bird tracks).
-extractCodeBlocks :: String -> [CodeBlock]
+--   blocks (consecutive lines beginning with bird tracks), and error
+--   messages for code blocks that fail to parse.
+extractCodeBlocks :: String -> CollectErrors [CodeBlock]
 extractCodeBlocks
-  = rights
-  . map (makeCodeBlock . unlines . map (drop 2 . dropWhile isSpace))
+  = fmap catMaybes
+  . mapM (makeCodeBlock . unlines . map (drop 2 . dropWhile isSpace))
   . (split . dropBlanks . dropDelims $ whenElt (not . isBird))
   . lines
   where
@@ -319,21 +356,25 @@ data ParsedModule = ParsedModule
 makeLenses ''ParsedModule
 
 -- | Turn the contents of a @.hs@ file into a 'ParsedModule'.
-parseModule :: String -> Either String ParsedModule
-parseModule src =
+parseModule :: FilePath -> String -> CollectErrors (Maybe ParsedModule)
+parseModule fileName src =
   case HSE.parseFileContentsWithComments parseMode src of
-    ParseFailed _ errStr -> Left errStr
-    ParseOk (m, cs)      ->
+    ParseFailed loc err -> failWith $ showParseFailure loc err
+    ParseOk (m, cs)     -> do
+      allBlocks <- fmap concat
+                   . mapM extractCodeBlocks
+                   . coalesceComments
+                   $ cs
       let cs'       = map explodeComment cs
-          allBlocks = concatMap extractCodeBlocks
-                    . coalesceComments
-                    $ cs
           diaNames  = S.unions . map getDiagramNames $ cs'
           blocks    = filter (any (`S.member` diaNames) . view codeBlockBindings)
                              allBlocks
-      in  Right $ ParsedModule m cs' blocks
+      return . Just $ ParsedModule m cs' blocks
   where
-    parseMode = defaultParseMode { fixities = Just baseFixities }
+    parseMode = defaultParseMode
+                { fixities      = Nothing
+                , parseFilename = fileName
+                }
 
 -- | Turn a 'ParsedModule' back into a String.
 displayModule :: ParsedModule -> String
@@ -426,20 +467,27 @@ compileDiagrams cacheDir outputDir m =
 --   files that are under version control, so you can compare the two
 --   versions and roll back if 'processHaddockDiagrams' does something
 --   horrible.
+--
+--   Returns a list of warnings and/or errors.
 processHaddockDiagrams
   :: FilePath  -- ^ cache directory
   -> FilePath  -- ^ output directory
   -> FilePath  -- ^ file to be processed
-  -> IO ()
+  -> IO [String]
 processHaddockDiagrams cacheDir outputDir file = do
-  src <- Strict.readFile file
-  case parseModule src of
-    Left  err -> putStrLn err   -- XXX FIXME should do something better?
-    Right m   -> do
-      m' <- compileDiagrams cacheDir outputDir m
-      let src' = displayModule m'
-      when (nonTrivialDiff src src') $
-        writeFile file (addTrailingNL src')
+  e   <- doesFileExist file
+  case e of
+    False -> return ["Error: " ++ file ++ " not found."]
+    True  -> do
+      src <- Strict.readFile file
+      case runCE (parseModule file src) of
+        (Just m, msgs) -> do
+          m' <- compileDiagrams cacheDir outputDir m
+          let src' = displayModule m'
+          when (nonTrivialDiff src src') $
+            writeFile file (addTrailingNL src')
+          return msgs
+        (Nothing, msgs) -> return msgs
 
 -- haskell-src-exts drops trailing whitespace, so make sure we don't
 -- write out a new file just because of some trailing whitespace
