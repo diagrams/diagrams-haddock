@@ -2,6 +2,7 @@
 module Main where
 
 import           Control.Monad          (forM_, when)
+import           Data.List              (intercalate)
 import           Data.Version           (showVersion)
 import           Diagrams.Haddock
 import           System.Console.CmdArgs
@@ -56,16 +57,18 @@ main = do
     d <- doesDirectoryExist targ
     f <- doesFileExist targ
     case (d,f) of
-      (True,_) -> processCabalPackage targ
-      (_,True) -> processFile targ
+      (True,_) -> processCabalPackage opts targ
+      (_,True) -> processFile opts targ
       _        -> targetError targ
-  when (null (targets opts)) $ processCabalPackage "."
+  when (null (targets opts)) $ processCabalPackage opts "."
 
 targetError :: FilePath -> IO ()
 targetError targ = putStrLn $ "Warning: target " ++ targ ++ " does not exist, ignoring."
 
-processCabalPackage :: FilePath -> IO ()
+processCabalPackage :: DiagramsHaddock -> FilePath -> IO ()
 processCabalPackage = undefined
 
-processFile :: FilePath -> IO ()
-processFile = undefined
+processFile :: DiagramsHaddock -> FilePath -> IO ()
+processFile opts file = do
+  errs <- processHaddockDiagrams (cacheDir opts) (outputDir opts) file
+  putStrLn $ intercalate "\n" errs
