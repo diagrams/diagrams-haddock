@@ -84,6 +84,7 @@ import qualified Data.Set                        as S
 import           Data.VectorSpace                (zeroV)
 import           Language.Haskell.Exts.Annotated hiding (parseModule)
 import qualified Language.Haskell.Exts.Annotated as HSE
+import           Language.Preprocessor.Cpphs
 import           System.Directory                (copyFile,
                                                   createDirectoryIfMissing,
                                                   doesFileExist)
@@ -481,14 +482,19 @@ processHaddockDiagrams cacheDir outputDir file = do
     False -> return ["Error: " ++ file ++ " not found."]
     True  -> do
       src <- Strict.readFile file
-      case runCE (parseModule file src) of
-        (Just m, msgs) -> do
+      go False src
+  where
+    go cpp src =
+      case (cpp, runCE (parseModule file src)) of
+        (_,(Just m, msgs)) -> do
           m' <- compileDiagrams cacheDir outputDir m
           let src' = displayModule m'
           when (nonTrivialDiff src src') $
             writeFile file (addTrailingNL src')
           return msgs
-        (Nothing, msgs) -> return msgs
+        (False,(Nothing, "Parse error: #":_)) -> runCpp src >>= go True
+        (_,(Nothing, msgs)) -> return msgs
+    runCpp s = runCpphs defaultCpphsOptions "file" s
 
 -- haskell-src-exts drops trailing whitespace, so make sure we don't
 -- write out a new file just because of some trailing whitespace
