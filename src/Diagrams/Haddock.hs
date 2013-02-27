@@ -485,15 +485,16 @@ processHaddockDiagrams cacheDir outputDir file = do
       go False src
   where
     go cpp src =
-      case (cpp, runCE (parseModule file src)) of
-        (_,(Just m, msgs)) -> do
+      case runCE (parseModule file src) of
+        (Just m, msgs) -> do
           m' <- compileDiagrams cacheDir outputDir m
           let src' = displayModule m'
           when (nonTrivialDiff src src') $
             writeFile file (addTrailingNL src')
           return msgs
-        (False,(Nothing, "Parse error: #":_)) -> runCpp src >>= go True
-        (_,(Nothing, msgs)) -> return msgs
+        (Nothing, msgs) -> if not cpp && any (("Parse error: #" `elem`) . lines) msgs
+                             then runCpp src >>= go True
+                             else return msgs
     runCpp s = runCpphs defaultCpphsOptions "file" s
 
 -- haskell-src-exts drops trailing whitespace, so make sure we don't
