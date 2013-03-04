@@ -66,6 +66,7 @@ module Diagrams.Haddock
     ) where
 
 import           Control.Applicative             hiding (many, (<|>))
+import           Control.Arrow                   (first, (&&&), (***))
 import           Control.Lens                    hiding ((<.>))
 import           Control.Monad                   (when)
 import           Control.Monad.Writer
@@ -234,11 +235,16 @@ collapseComment (CommentWithURLs (Comment b s _) urls)
 
 -- | Given a series of comments, return a list of their contents,
 --   coalescing blocks of adjacent single-line comments into one
---   String.
-coalesceComments :: [Comment] -> [String]
+--   String.  Each string will be paired with the number of the line
+--   on which it begins.
+coalesceComments :: [Comment] -> [(String, Int)]
 coalesceComments
-  = map unlines
-  . (map . map) (getComment . fst)
+  = map (unlines . map getComment &&& commentLine . head)
+
+    -- discard no longer needed numbers
+  . map (map fst)
+
+    -- group consecutive runs
   . concatMap (groupBy ((==) `on` snd))
 
     -- subtract consecutive numbers so runs show up as repeats
@@ -288,15 +294,16 @@ makeLenses ''CodeBlock
 -- code block within that file
 
 -- | Given a @String@ representing a code block, /i.e./ valid Haskell
---   code with any bird tracks already stripped off, attempt to parse
---   it, extract the list of bindings present, and construct a
---   'CodeBlock' value.
-makeCodeBlock :: String -> CollectErrors (Maybe CodeBlock)
-makeCodeBlock s =
+--   code with any bird tracks already stripped off, along with its
+--   beginning line number (and the name of the file from which it was
+--   taken), attempt to parse it, extract the list of bindings
+--   present, and construct a 'CodeBlock' value.
+makeCodeBlock :: FilePath -> (String,Int) -> CollectErrors (Maybe CodeBlock)
+makeCodeBlock file (s,l) =
   case HSE.parseFileContentsWithMode parseMode s of
     ParseOk m           -> return . Just $ CodeBlock s (collectBindings m)
     ParseFailed loc err -> failWith . unlines $
-      [ "Warning: could not parse code block:" ]
+      [ file ++ ": " ++ show l ++ ": Warning: could not parse code block:" ]
       ++
       showBlock s
       ++
@@ -328,15 +335,19 @@ getName :: Name l -> String
 getName (Ident _ s)  = s
 getName (Symbol _ s) = s
 
--- | From a @String@ representing a comment, extract all the code
---   blocks (consecutive lines beginning with bird tracks), and error
---   messages for code blocks that fail to parse.
-extractCodeBlocks :: String -> CollectErrors [CodeBlock]
-extractCodeBlocks
+-- | From a @String@ representing a comment (along with its beginning
+--   line number, and the name of the file it came from, for error
+--   reporting purposes), extract all the code blocks (consecutive
+--   lines beginning with bird tracks), and error messages for code
+--   blocks that fail to parse.
+extractCodeBlocks :: FilePath -> (String,Int) -> CollectErrors [CodeBlock]
+extractCodeBlocks file (s,l)
   = fmap catMaybes
-  . mapM (makeCodeBlock . unlines . map (drop 2 . dropWhile isSpace))
-  . (split . dropBlanks . dropDelims $ whenElt (not . isBird))
+  . mapM (makeCodeBlock file . (unlines***head) . unzip . (map.first) (drop 2 . dropWhile isSpace))
+  . (split . dropBlanks . dropDelims $ whenElt (not . isBird . fst))
+  . flip zip [l ..]
   . lines
+  $ s
   where
     isBird = ("> " `isPrefixOf`) . dropWhile isSpace
 
@@ -366,7 +377,7 @@ parseModule fileName src =
     ParseFailed loc err -> failWith $ showParseFailure loc err
     ParseOk (m, cs)     -> do
       allBlocks <- fmap concat
-                   . mapM extractCodeBlocks
+                   . mapM (extractCodeBlocks fileName)
                    . coalesceComments
                    $ cs
       let cs'       = map explodeComment cs
