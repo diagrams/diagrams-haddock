@@ -59,11 +59,13 @@ module Diagrams.Haddock
       -- $diagrams
 
     , compileDiagram
-    , compileComment
     , compileDiagrams
     , processHaddockDiagrams
 
     ) where
+
+import           Prelude                         hiding (writeFile)
+import qualified System.IO.Cautious              as Cautiously
 
 import           Control.Applicative             hiding (many, (<|>))
 import           Control.Arrow                   (first, (&&&), (***))
@@ -404,6 +406,7 @@ displayModule (ParsedModule m cs _) = exactPrint m (map collapseComment cs)
 --   outputting final diagrams, and all the relevant code blocks,
 --   compile the diagram referenced by a single URL, returning a new
 --   URL updated to point to the location of the generated diagram.
+--   Also return a @Bool@ indicating whether the URL changed.
 --
 --   In particular, the diagram will be output to @outDir/name.svg@,
 --   where @outDir@ is the second argument to @compileDiagram@, and
@@ -414,7 +417,7 @@ displayModule (ParsedModule m cs _) = exactPrint m (map collapseComment cs)
 --   more flexible/configurable, just yell.
 compileDiagram :: FilePath   -- ^ cache directory
                -> FilePath   -- ^ output directory
-               -> [CodeBlock] -> DiagramURL -> IO DiagramURL
+               -> [CodeBlock] -> DiagramURL -> IO (DiagramURL, Bool)
 compileDiagram cacheDir outputDir code url = do
   createDirectoryIfMissing True outputDir
   createDirectoryIfMissing True cacheDir
@@ -424,6 +427,9 @@ compileDiagram cacheDir outputDir code url = do
 
       w = read <$> M.lookup "width" (url ^. diagramOpts)
       h = read <$> M.lookup "height" (url ^. diagramOpts)
+
+      oldURL = (url, False)
+      newURL = (url & diagramURL .~ baseFile, baseFile /= url^.diagramURL)
 
   res <- buildDiagram
            SVG
@@ -436,38 +442,37 @@ compileDiagram cacheDir outputDir code url = do
            (hashedRegenerate (\_ opts -> opts) cacheDir)
 
   case res of
-    ParseErr err    -> do putStrLn ("Parse error:")
-                          putStrLn err
-                          return url
-    InterpErr ierr  -> do putStrLn ("Interpreter error:")
-                          putStrLn (ppInterpError ierr)
-                          return url
-    Skipped hash    -> do copyFile (mkCached hash) outFile
-                          return $ url & diagramURL .~ baseFile
-    OK hash svg     -> do let cached = mkCached hash
-                          BS.writeFile cached (renderSvg svg)
-                          copyFile cached outFile
-                          return $ url & diagramURL .~ baseFile
+    -- XXX incorporate these into error reporting framework instead of printing
+    ParseErr err    -> do
+      putStrLn ("Parse error:")
+      putStrLn err
+      return oldURL
+    InterpErr ierr  -> do
+      putStrLn ("Interpreter error:")
+      putStrLn (ppInterpError ierr)
+      return oldURL
+    Skipped hash    -> do
+      copyFile (mkCached hash) outFile
+      return newURL
+    OK hash svg     -> do
+      let cached = mkCached hash
+      BS.writeFile cached (renderSvg svg)
+      copyFile cached outFile
+      return newURL
+
  where
    mkCached base = cacheDir </> base <.> "svg"
 
--- | Compile all the diagrams referenced in a single comment.
-compileComment :: FilePath  -- ^ cache directory
-               -> FilePath  -- ^ output directory
-               -> [CodeBlock] -> CommentWithURLs -> IO CommentWithURLs
-compileComment cacheDir outputDir code =
-  (diagramURLs . traverse) %%~
-    (either
-      (return . Left)
-      ((Right <$>) . compileDiagram cacheDir outputDir code)
-    )
-
 -- | Compile all the diagrams referenced in an entire module.
-compileDiagrams :: FilePath  -- ^ cache directory
-                -> FilePath  -- ^ output directory
-                -> ParsedModule -> IO ParsedModule
-compileDiagrams cacheDir outputDir m =
-  m & (pmComments . traverse) %%~ (compileComment cacheDir outputDir (m^.pmCode))
+compileDiagrams :: FilePath      -- ^ cache directory
+                -> FilePath      -- ^ output directory
+                -> ParsedModule
+                -> [Either String DiagramURL] -> IO ([Either String DiagramURL], Bool)
+compileDiagrams cacheDir outputDir m urls = do
+  urls' <- urls & (traverse . _Right)
+                %%~ compileDiagram cacheDir outputDir (m^.pmCode)
+  let changed = orOf (traverse . _Right . _2) urls'
+  return (urls' & (traverse . _Right) %~ fst, changed)
 
 -- | Read a file, compile all the referenced diagrams, and update all
 --   the diagram URLs to refer to the proper image files.  Note, this
@@ -489,29 +494,13 @@ processHaddockDiagrams cacheDir outputDir file = do
     True  -> do
       src <- Strict.readFile file
       case runCE (parseModule file src) of
-        (Just m, msgs) -> do
-          m' <- compileDiagrams cacheDir outputDir m
-          let src' = displayModule m'
-          when (nonTrivialDiff src src') $
-            writeFile file (addTrailingNL src')
-          return msgs
         (Nothing, msgs) -> return msgs
-
--- haskell-src-exts drops trailing whitespace, so make sure we don't
--- write out a new file just because of some trailing whitespace
--- differences.
-nonTrivialDiff :: String -> String -> Bool
-nonTrivialDiff = ((not . and) .: zipWith equalUpToTrailingWS) `on` lines
-  where
-    (.:) = (.) . (.)
-    equalUpToTrailingWS str1 str2
-      =  all isSpace (drop (length str1) str2)
-      && all isSpace (drop (length str2) str1)
-
--- Even if we did make some nontrivial changes, add a trailing newline
--- as is standard.
-addTrailingNL :: String -> String
-addTrailingNL [] = []
-addTrailingNL xs
-  | last xs /= '\n' = xs ++ "\n"
-  | otherwise       = xs
+        (Just m , msgs) ->
+          case P.parse parseDiagramURLs "" src of
+            Left _     ->
+              error "This case can never happen; see prop_parseDiagramURLs_succeeds"
+            Right urls -> do
+              (urls', changed) <- compileDiagrams cacheDir outputDir m urls
+              let src' = displayDiagramURLs urls'
+              when changed $ Cautiously.writeFile file src'
+              return msgs
