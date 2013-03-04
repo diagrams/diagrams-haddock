@@ -71,4 +71,6 @@ processCabalPackage = undefined
 processFile :: DiagramsHaddock -> FilePath -> IO ()
 processFile opts file = do
   errs <- processHaddockDiagrams (cacheDir opts) (outputDir opts) file
-  putStrLn $ intercalate "\n" errs
+  case errs of
+    [] -> return ()
+    _  -> putStrLn $ intercalate "\n" errs
