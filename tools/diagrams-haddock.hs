@@ -18,9 +18,10 @@ import           Paths_diagrams_haddock             (version)
 
 data DiagramsHaddock
   = DiagramsHaddock
-  { cacheDir  :: FilePath
-  , outputDir :: FilePath
-  , targets   :: [FilePath]
+  { cacheDir    :: FilePath
+  , outputDir   :: FilePath
+  , includeDirs :: [FilePath]
+  , targets     :: [FilePath]
   }
   deriving (Show, Typeable, Data)
 
@@ -36,6 +37,11 @@ diagramsHaddockOpts
     = "diagrams"
       &= typDir
       &= help "Directory to output compiled diagrams (default: diagrams)"
+
+  , includeDirs
+    = []
+      &= typDir
+      &= help "Include directory for CPP includes"
 
   , targets
     = def &= args &= typFile
@@ -86,8 +92,11 @@ processCabalPackage opts dir = do
       case mlib of
         Nothing -> return ()
         Just lib -> do
-          let srcDirs = P.hsSourceDirs . P.libBuildInfo $ lib
-          mapM_ (tryProcessFile opts dir srcDirs) . map toFilePath . P.exposedModules $ lib
+          let buildInfo = P.libBuildInfo lib
+          let srcDirs = P.hsSourceDirs buildInfo
+          let includes = P.includeDirs buildInfo
+          let opts' = opts { includeDirs = includeDirs opts ++ includes }
+          mapM_ (tryProcessFile opts' dir srcDirs) . map toFilePath . P.exposedModules $ lib
 
   where distDir = dir </> "dist"
 
@@ -111,7 +120,7 @@ tryProcessFile opts dir srcDirs fileBase = do
 -- | Process a single file with diagrams-haddock.
 processFile :: DiagramsHaddock -> FilePath -> IO ()
 processFile opts file = do
-  errs <- processHaddockDiagrams (cacheDir opts) (outputDir opts) file
+  errs <- processHaddockDiagrams (cacheDir opts) (outputDir opts) (includeDirs opts) file
   case errs of
     [] -> return ()
     _  -> putStrLn $ intercalate "\n" errs
