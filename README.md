@@ -142,11 +142,14 @@ diagrams-haddock foo.hs baz/bar.lhs ~/src/some-cabal-directory
   request](https://github.com/diagrams/diagrams-haddock/issues); they
   shouldn't be too hard to add.
 
+Also, if you simply invoke `diagrams-haddock` with no targets, it will
+process the Cabal package in the current directory.
+
 `diagrams-haddock` also takes a few command-line options which can be
 used to customize its behavior:
 
 * `-c`, `--cachedir`: When diagrams are compiled, their source code is
-  hashed and the output stored in a file like `068fe.......342.svg`,
+  hashed and the output image stored in a file like `068fe.......342.svg`,
   with the value of the hash as the name of the file.  This way, if
   the source code for a diagram has not changed in between invocations
   of `diagrams-haddock`, it does not need to be recompiled.  This
@@ -186,26 +189,26 @@ Haddock documentation.  There are two good ways to accomplish this:
    documentation.  So you could simply write something like
 
      ```
-     extra-html-files: diagrams/*
+     extra-html-files: diagrams/*.svg
      ```
 
-     in your `.cabal` file.  Unfortunately it will still be a while
+     in your `.cabal` file.  Unfortunately, it will still be a while
      until this feature makes its way into a new release of `cabal`,
-     and yet a while after that until you can be sure that most people
+     and yet longer before you can be sure that most people
      who may want to build your package's documentation have the new
      version.
 
 2. In the meantime, it is possible to take advantage of `cabal`'s
-   system of user hooks to manually cause the images to be copied
-   right after the Haddock documentation is generated.  Set
-   `build-type: Custom` in your `.cabal file`, and put something like
-   the following in your `Setup.hs`:
+   system of user hooks to manually copy the images right after the
+   Haddock documentation is generated.  Set `build-type: Custom` in
+   your `.cabal file`, and put something like the following in your
+   `Setup.hs`:
 
     ``` haskell
     import           Data.List                 (isSuffixOf)
     import           Distribution.Simple
     import           Distribution.Simple.Setup (Flag (..), HaddockFlags,
-						haddockDistPref)
+                                                haddockDistPref)
     import           Distribution.Simple.Utils (copyFiles)
     import           Distribution.Text         (display)
     import           Distribution.Verbosity    (normal)
@@ -216,30 +219,30 @@ Haddock documentation.  There are two good ways to accomplish this:
     haddockOutputDir :: Package pkg => HaddockFlags -> pkg -> FilePath
     haddockOutputDir flags pkg = destDir
        where
-	 baseDir = case haddockDistPref flags of
-			  NoFlag -> "."
-			  Flag x -> x
-	 destDir = baseDir </> "doc" </> "html" </> display (packageName pkg)
+         baseDir = case haddockDistPref flags of
+                          NoFlag -> "."
+                          Flag x -> x
+         destDir = baseDir </> "doc" </> "html" </> display (packageName pkg)
 
     main :: IO ()
     main = defaultMainWithHooks simpleUserHooks
-	     { postHaddock = \args flags pkg lbi -> do
-		 dias <- filter ("svg" `isSuffixOf`) `fmap` getDirectoryContents "diagrams"
-		 copyFiles normal (haddockOutputDir flags pkg)
-		   (map (\d -> ("", "diagrams" </> d)) dias)
-		 postHaddock simpleUserHooks args flags pkg lbi
-	     }
+             { postHaddock = \args flags pkg lbi -> do
+                 dias <- filter ("svg" `isSuffixOf`) `fmap` getDirectoryContents "diagrams"
+                 copyFiles normal (haddockOutputDir flags pkg)
+                   (map (\d -> ("", "diagrams" </> d)) dias)
+                 postHaddock simpleUserHooks args flags pkg lbi
+             }
     ```
 
-    It's not the prettiest, but it works!
+    It may not be pretty, but it works!
 
 ## The diagrams-haddock library
 
 For most use cases, simply using the `diagrams-haddock` executable
 should get you what you want.  Note, however, that the internals are
 also exposed as a library, making it possible to do all sorts of crazy
-stuff you might dream up.
+stuff you might dream up.  Let us know what you do with it!
 
 ## Reporting bugs
 
-Please report any bugs, feature requests, etc., on the [github issue tracker](https://github.com/diagrams/diagrams-haddock/issues).
+Please report any bugs, feature requests, *etc.*, on the [github issue tracker](https://github.com/diagrams/diagrams-haddock/issues).
