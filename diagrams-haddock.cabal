@@ -7,7 +7,9 @@ description:         diagrams-haddock is a tool for compiling embedded inline
                      diagrams.  Just create some diagrams code using
                      special markup, run diagrams-haddock, and ensure
                      the resulting image files are installed along
-                     with your documentation.
+                     with your documentation.  For complete
+                     documentation and examples, see
+                     <https://github.com/diagrams/diagrams-haddock/blob/master/README.md>.
 homepage:            http://projects.haskell.org/diagrams/
 license:             BSD3
 license-file:        LICENSE
