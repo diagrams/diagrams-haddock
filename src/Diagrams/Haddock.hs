@@ -59,13 +59,16 @@ module Diagrams.Haddock
       -- $diagrams
 
     , compileDiagram
-    , compileComment
     , compileDiagrams
     , processHaddockDiagrams
 
     ) where
 
+import           Prelude                         hiding (writeFile)
+import qualified System.IO.Cautious              as Cautiously
+
 import           Control.Applicative             hiding (many, (<|>))
+import           Control.Arrow                   (first, (&&&), (***))
 import           Control.Lens                    hiding ((<.>))
 import           Control.Monad                   (when)
 import           Control.Monad.Writer
@@ -235,11 +238,16 @@ collapseComment (CommentWithURLs (Comment b s _) urls)
 
 -- | Given a series of comments, return a list of their contents,
 --   coalescing blocks of adjacent single-line comments into one
---   String.
-coalesceComments :: [Comment] -> [String]
+--   String.  Each string will be paired with the number of the line
+--   on which it begins.
+coalesceComments :: [Comment] -> [(String, Int)]
 coalesceComments
-  = map unlines
-  . (map . map) (getComment . fst)
+  = map (unlines . map getComment &&& commentLine . head)
+
+    -- discard no longer needed numbers
+  . map (map fst)
+
+    -- group consecutive runs
   . concatMap (groupBy ((==) `on` snd))
 
     -- subtract consecutive numbers so runs show up as repeats
@@ -284,20 +292,17 @@ data CodeBlock
 
 makeLenses ''CodeBlock
 
--- XXX need to pass more info to makeCodeBlock so we can give a better
--- error message: name of file being processed, and location of the
--- code block within that file
-
 -- | Given a @String@ representing a code block, /i.e./ valid Haskell
---   code with any bird tracks already stripped off, attempt to parse
---   it, extract the list of bindings present, and construct a
---   'CodeBlock' value.
-makeCodeBlock :: String -> CollectErrors (Maybe CodeBlock)
-makeCodeBlock s =
+--   code with any bird tracks already stripped off, along with its
+--   beginning line number (and the name of the file from which it was
+--   taken), attempt to parse it, extract the list of bindings
+--   present, and construct a 'CodeBlock' value.
+makeCodeBlock :: FilePath -> (String,Int) -> CollectErrors (Maybe CodeBlock)
+makeCodeBlock file (s,l) =
   case HSE.parseFileContentsWithMode parseMode s of
     ParseOk m           -> return . Just $ CodeBlock s (collectBindings m)
     ParseFailed loc err -> failWith . unlines $
-      [ "Warning: could not parse code block:" ]
+      [ file ++ ": " ++ show l ++ ": Warning: could not parse code block:" ]
       ++
       showBlock s
       ++
@@ -329,15 +334,19 @@ getName :: Name l -> String
 getName (Ident _ s)  = s
 getName (Symbol _ s) = s
 
--- | From a @String@ representing a comment, extract all the code
---   blocks (consecutive lines beginning with bird tracks), and error
---   messages for code blocks that fail to parse.
-extractCodeBlocks :: String -> CollectErrors [CodeBlock]
-extractCodeBlocks
+-- | From a @String@ representing a comment (along with its beginning
+--   line number, and the name of the file it came from, for error
+--   reporting purposes), extract all the code blocks (consecutive
+--   lines beginning with bird tracks), and error messages for code
+--   blocks that fail to parse.
+extractCodeBlocks :: FilePath -> (String,Int) -> CollectErrors [CodeBlock]
+extractCodeBlocks file (s,l)
   = fmap catMaybes
-  . mapM (makeCodeBlock . unlines . map (drop 2 . dropWhile isSpace))
-  . (split . dropBlanks . dropDelims $ whenElt (not . isBird))
+  . mapM (makeCodeBlock file . (unlines***head) . unzip . (map.first) (drop 2 . dropWhile isSpace))
+  . (split . dropBlanks . dropDelims $ whenElt (not . isBird . fst))
+  . flip zip [l ..]
   . lines
+  $ s
   where
     isBird = ("> " `isPrefixOf`) . dropWhile isSpace
 
@@ -367,7 +376,7 @@ parseModule fileName src =
     ParseFailed loc err -> failWith $ showParseFailure loc err
     ParseOk (m, cs)     -> do
       allBlocks <- fmap concat
-                   . mapM extractCodeBlocks
+                   . mapM (extractCodeBlocks fileName)
                    . coalesceComments
                    $ cs
       let cs'       = map explodeComment cs
@@ -398,6 +407,7 @@ displayModule (ParsedModule m cs _) = exactPrint m (map collapseComment cs)
 --   outputting final diagrams, and all the relevant code blocks,
 --   compile the diagram referenced by a single URL, returning a new
 --   URL updated to point to the location of the generated diagram.
+--   Also return a @Bool@ indicating whether the URL changed.
 --
 --   In particular, the diagram will be output to @outDir/name.svg@,
 --   where @outDir@ is the second argument to @compileDiagram@, and
@@ -408,7 +418,7 @@ displayModule (ParsedModule m cs _) = exactPrint m (map collapseComment cs)
 --   more flexible/configurable, just yell.
 compileDiagram :: FilePath   -- ^ cache directory
                -> FilePath   -- ^ output directory
-               -> [CodeBlock] -> DiagramURL -> IO DiagramURL
+               -> [CodeBlock] -> DiagramURL -> IO (DiagramURL, Bool)
 compileDiagram cacheDir outputDir code url = do
   createDirectoryIfMissing True outputDir
   createDirectoryIfMissing True cacheDir
@@ -418,6 +428,9 @@ compileDiagram cacheDir outputDir code url = do
 
       w = read <$> M.lookup "width" (url ^. diagramOpts)
       h = read <$> M.lookup "height" (url ^. diagramOpts)
+
+      oldURL = (url, False)
+      newURL = (url & diagramURL .~ baseFile, baseFile /= url^.diagramURL)
 
   res <- buildDiagram
            SVG
@@ -430,38 +443,37 @@ compileDiagram cacheDir outputDir code url = do
            (hashedRegenerate (\_ opts -> opts) cacheDir)
 
   case res of
-    ParseErr err    -> do putStrLn ("Parse error:")
-                          putStrLn err
-                          return url
-    InterpErr ierr  -> do putStrLn ("Interpreter error:")
-                          putStrLn (ppInterpError ierr)
-                          return url
-    Skipped hash    -> do copyFile (mkCached hash) outFile
-                          return $ url & diagramURL .~ baseFile
-    OK hash svg     -> do let cached = mkCached hash
-                          BS.writeFile cached (renderSvg svg)
-                          copyFile cached outFile
-                          return $ url & diagramURL .~ baseFile
+    -- XXX incorporate these into error reporting framework instead of printing
+    ParseErr err    -> do
+      putStrLn ("Parse error:")
+      putStrLn err
+      return oldURL
+    InterpErr ierr  -> do
+      putStrLn ("Interpreter error:")
+      putStrLn (ppInterpError ierr)
+      return oldURL
+    Skipped hash    -> do
+      copyFile (mkCached hash) outFile
+      return newURL
+    OK hash svg     -> do
+      let cached = mkCached hash
+      BS.writeFile cached (renderSvg svg)
+      copyFile cached outFile
+      return newURL
+
  where
    mkCached base = cacheDir </> base <.> "svg"
 
--- | Compile all the diagrams referenced in a single comment.
-compileComment :: FilePath  -- ^ cache directory
-               -> FilePath  -- ^ output directory
-               -> [CodeBlock] -> CommentWithURLs -> IO CommentWithURLs
-compileComment cacheDir outputDir code =
-  (diagramURLs . traverse) %%~
-    (either
-      (return . Left)
-      ((Right <$>) . compileDiagram cacheDir outputDir code)
-    )
-
 -- | Compile all the diagrams referenced in an entire module.
-compileDiagrams :: FilePath  -- ^ cache directory
-                -> FilePath  -- ^ output directory
-                -> ParsedModule -> IO ParsedModule
-compileDiagrams cacheDir outputDir m =
-  m & (pmComments . traverse) %%~ (compileComment cacheDir outputDir (m^.pmCode))
+compileDiagrams :: FilePath      -- ^ cache directory
+                -> FilePath      -- ^ output directory
+                -> ParsedModule
+                -> [Either String DiagramURL] -> IO ([Either String DiagramURL], Bool)
+compileDiagrams cacheDir outputDir m urls = do
+  urls' <- urls & (traverse . _Right)
+                %%~ compileDiagram cacheDir outputDir (m^.pmCode)
+  let changed = orOf (traverse . _Right . _2) urls'
+  return (urls' & (traverse . _Right) %~ fst, changed)
 
 -- | Read a file, compile all the referenced diagrams, and update all
 --   the diagram URLs to refer to the proper image files.  Note, this
@@ -486,32 +498,16 @@ processHaddockDiagrams cacheDir outputDir file = do
   where
     go cpp src =
       case runCE (parseModule file src) of
-        (Just m, msgs) -> do
-          m' <- compileDiagrams cacheDir outputDir m
-          let src' = displayModule m'
-          when (nonTrivialDiff src src') $
-            writeFile file (addTrailingNL src')
-          return msgs
         (Nothing, msgs) -> if not cpp && any (("Parse error: #" `elem`) . lines) msgs
                              then runCpp src >>= go True
                              else return msgs
+        (Just m , msgs) ->
+          case P.parse parseDiagramURLs "" src of
+            Left _     ->
+              error "This case can never happen; see prop_parseDiagramURLs_succeeds"
+            Right urls -> do
+              (urls', changed) <- compileDiagrams cacheDir outputDir m urls
+              let src' = displayDiagramURLs urls'
+              when changed $ Cautiously.writeFile file src'
+              return msgs
     runCpp s = runCpphs defaultCpphsOptions "file" s
-
--- haskell-src-exts drops trailing whitespace, so make sure we don't
--- write out a new file just because of some trailing whitespace
--- differences.
-nonTrivialDiff :: String -> String -> Bool
-nonTrivialDiff = ((not . and) .: zipWith equalUpToTrailingWS) `on` lines
-  where
-    (.:) = (.) . (.)
-    equalUpToTrailingWS str1 str2
-      =  all isSpace (drop (length str1) str2)
-      && all isSpace (drop (length str2) str1)
-
--- Even if we did make some nontrivial changes, add a trailing newline
--- as is standard.
-addTrailingNL :: String -> String
-addTrailingNL [] = []
-addTrailingNL xs
-  | last xs /= '\n' = xs ++ "\n"
-  | otherwise       = xs
