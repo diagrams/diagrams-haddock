@@ -34,10 +34,7 @@ module Diagrams.Haddock
       -- * Comments
       -- $comments
 
-    , CommentWithURLs(..)
     , getDiagramNames
-    , explodeComment
-    , collapseComment
     , coalesceComments
 
       -- * Code blocks
@@ -47,12 +44,7 @@ module Diagrams.Haddock
     , makeCodeBlock
     , collectBindings
     , extractCodeBlocks
-
-      -- * Modules
-      -- $modules
-
-    , ParsedModule(..)
-    , parseModule
+    , parseCodeBlocks
 
       -- * Diagram compilation
       -- $diagrams
@@ -82,7 +74,7 @@ import qualified Data.Map                        as M
 import           Data.Maybe                      (catMaybes, mapMaybe)
 import qualified Data.Set                        as S
 import           Data.VectorSpace                (zeroV)
-import           Language.Haskell.Exts.Annotated hiding (loc, parseModule)
+import           Language.Haskell.Exts.Annotated hiding (loc)
 import qualified Language.Haskell.Exts.Annotated as HSE
 import           Language.Preprocessor.Cpphs
 import           System.Directory                (copyFile,
@@ -196,45 +188,15 @@ displayDiagramURLs = concatMap (either id displayDiagramURL)
 ------------------------------------------------------------
 
 -- $comments
--- The @haskell-src-exts@ package defines a 'Comment' type for
--- representing comments.  Here we define a type to represent parsed
--- comments with explicitly represented diagram URLs
--- ('explodeComment'), so that the diagram URLs can be easily
--- extracted ('getDiagramNames') and manipulated before being
--- serialized back into a 'Comment' ('collapseComment').
+-- A few miscellaneous functions for dealing with comments.
 
--- | The @CommentWithURLs@ type represents a Haddock comment
---   potentially containing diagrams URLs, but with the URLs separated
---   out so they are easy to query and modify; ultimately the whole
---   thing can be turned back into a 'Comment'.
-data CommentWithURLs
-    = CommentWithURLs
-      { _originalComment :: Comment
-      , _diagramURLs     :: [Either String DiagramURL]
-      }
-  deriving (Show, Eq)
-
-makeLensesFor [("_diagramURLs", "diagramURLs")] ''CommentWithURLs
-
--- | Get the names of all diagrams referenced in the given comment.
-getDiagramNames :: CommentWithURLs -> S.Set String
-getDiagramNames = S.fromList . map (view diagramName) . rights . view diagramURLs
-
--- | \"Explode\" the content of a comment to expose the diagram URLs
---   for easy processing.
-explodeComment :: Comment -> CommentWithURLs
-explodeComment c@(Comment _ _ s) =
+-- | Get the names of all diagrams referenced from diagram URLs in the
+--   given comment.
+getDiagramNames :: Comment -> S.Set String
+getDiagramNames (Comment _ _ s) =
   case P.parse parseDiagramURLs "" s of
     Left _     -> error "This case can never happen; see prop_parseDiagramURLs_succeeds"
-    Right urls -> CommentWithURLs c urls
-
--- | \"Collapse\" a parsed comment back down into a normal
---   comment. Exploding and then collapsing a comment yields the
---   original comment; that is, @collapseComment . explodeComment ===
---   id@.
-collapseComment :: CommentWithURLs -> Comment
-collapseComment (CommentWithURLs (Comment b s _) urls)
-  = Comment b s (displayDiagramURLs urls)
+    Right urls -> S.fromList . map (view diagramName) . rights $ urls
 
 -- | Given a series of comments, return a list of their contents,
 --   coalescing blocks of adjacent single-line comments into one
@@ -320,7 +282,6 @@ makeCodeBlock file (s,l) =
       | otherwise     = indent 2 ls
       where ls = lines b
 
-
 -- | Collect the list of names bound in a module.
 collectBindings :: Module l -> [String]
 collectBindings (Module _ _ _ _ decls) = mapMaybe getBinding decls
@@ -352,40 +313,22 @@ extractCodeBlocks file (s,l)
   where
     isBird = ("> " `isPrefixOf`) . dropWhile isSpace
 
-------------------------------------------------------------
--- Modules
-------------------------------------------------------------
-
--- $modules
--- A representation for parsed modules including their code blocks and
--- diagram URLs.
-
--- | A @ParsedModule@ value contains a haskell-src-exts parsed module,
---   a list of exploded comments, and a list of code blocks which
---   contain bindings referenced in diagrams URLs.
-data ParsedModule = ParsedModule
-                    { _pmModule   :: Module SrcSpanInfo
-                    , _pmComments :: [CommentWithURLs]
-                    , _pmCode     :: [CodeBlock]
-                    }
-
-makeLensesFor [("_pmCode", "pmCode")] ''ParsedModule
-
--- | Turn the contents of a @.hs@ file into a 'ParsedModule'.
-parseModule :: FilePath -> String -> CollectErrors (Maybe ParsedModule)
-parseModule file src =
+-- | Take the contents of a Haskell source file (and the name of the
+--   file, for error reporting purposes), and extract all the code
+--   blocks which are referenced from diagram URLs.
+parseCodeBlocks :: FilePath -> String -> CollectErrors (Maybe [CodeBlock])
+parseCodeBlocks file src =
   case HSE.parseFileContentsWithComments parseMode src of
     ParseFailed loc err -> failWith $ showParseFailure loc err
-    ParseOk (m, cs)     -> do
+    ParseOk (_, cs)     -> do
       allBlocks <- fmap concat
                    . mapM (extractCodeBlocks file)
                    . coalesceComments
                    $ cs
-      let cs'       = map explodeComment cs
-          diaNames  = S.unions . map getDiagramNames $ cs'
+      let diaNames  = S.unions . map getDiagramNames $ cs
           blocks    = filter (any (`S.member` diaNames) . view codeBlockBindings)
                              allBlocks
-      return . Just $ ParsedModule m cs' blocks
+      return . Just $ blocks
   where
     parseMode = defaultParseMode
                 { fixities      = Nothing
@@ -466,11 +409,11 @@ compileDiagram cacheDir outputDir code url = do
 -- | Compile all the diagrams referenced in an entire module.
 compileDiagrams :: FilePath      -- ^ cache directory
                 -> FilePath      -- ^ output directory
-                -> ParsedModule
+                -> [CodeBlock]
                 -> [Either String DiagramURL] -> IO ([Either String DiagramURL], Bool)
-compileDiagrams cacheDir outputDir m urls = do
+compileDiagrams cacheDir outputDir c urls = do
   urls' <- urls & (traverse . _Right)
-                %%~ compileDiagram cacheDir outputDir (m^.pmCode)
+                %%~ compileDiagram cacheDir outputDir c
   let changed = orOf (traverse . _Right . _2) urls'
   return (urls' & (traverse . _Right) %~ fst, changed)
 
@@ -497,20 +440,20 @@ processHaddockDiagrams cacheDir outputDir includeDirs file = do
       r <- go src
       case r of
         (Nothing, msgs) -> return msgs
-        (Just m , msgs) ->
+        (Just c , msgs) ->
           case P.parse parseDiagramURLs "" src of
             Left _     ->
               error "This case can never happen; see prop_parseDiagramURLs_succeeds"
             Right urls -> do
-              (urls', changed) <- compileDiagrams cacheDir outputDir m urls
+              (urls', changed) <- compileDiagrams cacheDir outputDir c urls
               let src' = displayDiagramURLs urls'
               when changed $ Cautiously.writeFile file src'
               return msgs
   where
     go src =
-      case runCE (parseModule file src) of
+      case runCE (parseCodeBlocks file src) of
         r@(Nothing, msgs) -> if any (("Parse error: #" `elem`) . lines) msgs
-                             then runCpp src >>= return . runCE . parseModule file
+                             then runCpp src >>= return . runCE . parseCodeBlocks file
                              else return r
         r -> return r
     runCpp s = runCpphs opts file s

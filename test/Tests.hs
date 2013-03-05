@@ -1,13 +1,13 @@
 module Main where
 
 import           Control.Applicative
-import           Data.Either                          ( rights       )
-import qualified Data.Map as M
+import           Data.Either                          (rights)
+import qualified Data.Map                             as M
 import           Language.Haskell.Exts.Annotated
-import           Test.Framework                       ( defaultMain  )
-import           Test.Framework.Providers.QuickCheck2 ( testProperty )
+import           Test.Framework                       (defaultMain)
+import           Test.Framework.Providers.QuickCheck2 (testProperty)
 import           Test.QuickCheck
-import qualified Text.Parsec as P
+import qualified Text.Parsec                          as P
 
 import           Diagrams.Haddock
 
@@ -77,14 +77,10 @@ prop_parseDiagramURLs_succeeds s
       Left _  -> False
       Right _ -> True
 
-prop_explode_collapse :: Comment -> Bool
-prop_explode_collapse c = c == collapseComment (explodeComment c)
-
 tests =
   [ testProperty "DiagramURL display/parse"      prop_parseDisplay
   , testProperty "CommentWithURLs display/parse" prop_parseDisplayMany
   , testProperty "parseDiagramURLs succeeds"     prop_parseDiagramURLs_succeeds
-  , testProperty "Comment explode/collapse"      prop_explode_collapse
   ]
 
 main = defaultMain tests
