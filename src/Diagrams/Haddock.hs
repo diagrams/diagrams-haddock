@@ -10,7 +10,7 @@
 -- Include inline diagrams code in Haddock documentation!  For
 -- example, here is a green circle:
 --
--- <<greenCircle.svg#diagram=greenCircle&width=200>>
+-- <<diagrams/greenCircle.svg#diagram=greenCircle&width=200>>
 --
 -- which was literally produced by this code:
 --
@@ -372,14 +372,13 @@ compileDiagram cacheDir outputDir code url = do
   createDirectoryIfMissing True outputDir
   createDirectoryIfMissing True cacheDir
 
-  let baseFile = (url ^. diagramName) <.> "svg"
-      outFile  = outputDir </> baseFile
+  let outFile = outputDir </> (url ^. diagramName) <.> "svg"
 
       w = read <$> M.lookup "width" (url ^. diagramOpts)
       h = read <$> M.lookup "height" (url ^. diagramOpts)
 
       oldURL = (url, False)
-      newURL = (url & diagramURL .~ baseFile, baseFile /= url^.diagramURL)
+      newURL = (url & diagramURL .~ outFile, outFile /= url^.diagramURL)
 
   res <- buildDiagram
            SVG

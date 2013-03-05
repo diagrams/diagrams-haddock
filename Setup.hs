@@ -18,6 +18,6 @@ haddockOutputDir flags pkg = destDir
 main :: IO ()
 main = defaultMainWithHooks simpleUserHooks {
     postHaddock = \args flags pkg lbi -> do
-        copyFiles normal (haddockOutputDir flags pkg) [("diagrams","greenCircle.svg")]
+        copyFiles normal (haddockOutputDir flags pkg) [("", "diagrams/greenCircle.svg")]
         postHaddock simpleUserHooks args flags pkg lbi
   }
