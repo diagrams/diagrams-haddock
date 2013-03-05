@@ -522,5 +522,4 @@ processHaddockDiagrams cacheDir outputDir includeDirs file = do
     opts = defaultCpphsOptions
          { includes = includeDirs
          , boolopts = defaultBoolOptions { hashline = False }
---         , boolopts = defaultBoolOptions { locations = False }
          }
