@@ -38,6 +38,7 @@ library
                        diagrams-svg >= 0.6 && < 0.7,
                        vector-space >= 0.8 && < 0.9,
                        lens >= 3.8 && < 3.9,
+                       cpphs >= 1.16,
                        cautious-file >= 1.0 && < 1.1
   hs-source-dirs:      src
   other-extensions:    TemplateHaskell
