@@ -70,12 +70,10 @@ import qualified System.IO.Cautious              as Cautiously
 import           Control.Applicative             hiding (many, (<|>))
 import           Control.Arrow                   (first, (&&&), (***))
 import           Control.Lens                    hiding ((<.>))
-import           Control.Monad                   (when)
 import           Control.Monad.Writer
 import qualified Data.ByteString.Lazy            as BS
 import           Data.Char                       (isSpace)
-import           Data.Either                     (lefts, partitionEithers,
-                                                  rights)
+import           Data.Either                     (lefts, rights)
 import           Data.Function                   (on)
 import           Data.List                       (groupBy, intercalate,
                                                   isPrefixOf)
@@ -85,7 +83,7 @@ import qualified Data.Map                        as M
 import           Data.Maybe                      (catMaybes, mapMaybe)
 import qualified Data.Set                        as S
 import           Data.VectorSpace                (zeroV)
-import           Language.Haskell.Exts.Annotated hiding (parseModule)
+import           Language.Haskell.Exts.Annotated hiding (loc, parseModule)
 import qualified Language.Haskell.Exts.Annotated as HSE
 import           Language.Preprocessor.Cpphs
 import           System.Directory                (copyFile,
@@ -99,7 +97,10 @@ import qualified Text.Parsec                     as P
 import           Text.Parsec.String
 
 import           Diagrams.Backend.SVG            (Options (..), SVG (..))
-import           Diagrams.Builder
+import           Diagrams.Builder                (BuildResult (..),
+                                                  buildDiagram,
+                                                  hashedRegenerate,
+                                                  ppInterpError)
 import           Diagrams.TwoD.Size              (mkSizeSpec)
 
 ------------------------------------------------------------
@@ -214,7 +215,7 @@ data CommentWithURLs
       }
   deriving (Show, Eq)
 
-makeLenses ''CommentWithURLs
+makeLensesFor [("_diagramURLs", "diagramURLs")] ''CommentWithURLs
 
 -- | Get the names of all diagrams referenced in the given comment.
 getDiagramNames :: CommentWithURLs -> S.Set String
@@ -264,7 +265,7 @@ coalesceComments
   where
     isMultiLine (Comment b _ _) = b
     getComment  (Comment _ _ c) = c
-    commentLine (Comment _ span _) = srcSpanStartLine span
+    commentLine (Comment _ s _) = srcSpanStartLine s
 
     -- Argh, I really wish the split package supported splitting on a
     -- predicate over adjacent elements!  That would make the above
@@ -369,16 +370,16 @@ data ParsedModule = ParsedModule
                     , _pmCode     :: [CodeBlock]
                     }
 
-makeLenses ''ParsedModule
+makeLensesFor [("_pmCode", "pmCode")] ''ParsedModule
 
 -- | Turn the contents of a @.hs@ file into a 'ParsedModule'.
 parseModule :: FilePath -> String -> CollectErrors (Maybe ParsedModule)
-parseModule fileName src =
+parseModule file src =
   case HSE.parseFileContentsWithComments parseMode src of
     ParseFailed loc err -> failWith $ showParseFailure loc err
     ParseOk (m, cs)     -> do
       allBlocks <- fmap concat
-                   . mapM (extractCodeBlocks fileName)
+                   . mapM (extractCodeBlocks file)
                    . coalesceComments
                    $ cs
       let cs'       = map explodeComment cs
@@ -389,7 +390,7 @@ parseModule fileName src =
   where
     parseMode = defaultParseMode
                 { fixities      = Nothing
-                , parseFilename = fileName
+                , parseFilename = file
                 , extensions    = MultiParamTypeClasses : haskell2010
                 }
 
