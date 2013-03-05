@@ -488,11 +488,12 @@ compileDiagrams cacheDir outputDir m urls = do
 --
 --   Returns a list of warnings and/or errors.
 processHaddockDiagrams
-  :: FilePath  -- ^ cache directory
-  -> FilePath  -- ^ output directory
-  -> FilePath  -- ^ file to be processed
+  :: FilePath   -- ^ cache directory
+  -> FilePath   -- ^ output directory
+  -> [FilePath] -- ^ include directories
+  -> FilePath   -- ^ file to be processed
   -> IO [String]
-processHaddockDiagrams cacheDir outputDir file = do
+processHaddockDiagrams cacheDir outputDir includeDirs file = do
   e   <- doesFileExist file
   case e of
     False -> return ["Error: " ++ file ++ " not found."]
@@ -517,5 +518,9 @@ processHaddockDiagrams cacheDir outputDir file = do
                              then runCpp src >>= return . runCE . parseModule file
                              else return r
         r -> return r
-    runCpp s = runCpphs defaultCpphsOptions "file" s
-
+    runCpp s = runCpphs opts file s
+    opts = defaultCpphsOptions
+         { includes = includeDirs
+         , boolopts = defaultBoolOptions { hashline = False }
+--         , boolopts = defaultBoolOptions { locations = False }
+         }
