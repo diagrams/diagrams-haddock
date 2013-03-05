@@ -5,7 +5,7 @@ Haddock documentation generated using the
 [diagrams framework](http://projects.haskell.org/diagrams/).  The code
 to generate images is embedded directly within the source file itself
 (and the code can be included in the Haddock output or not, as you
-wish).  `diagrams-haddock` takes care of generating the images and
+wish).  `diagrams-haddock` takes care of generating SVG images and
 linking them into the Haddock output.
 
 ## Installing
@@ -24,6 +24,15 @@ files with embedded diagrams code and another copy where the diagrams
 code has been replaced by images.  If you find yourself scratching
 your head over the quirky ways that `diagrams-haddock` works, now you
 will know why.
+
+## An important caveat
+
+`diagrams-haddock` modifies files *in place*.  While every effort has
+been made to ensure that it cannot make catastrophic changes to your
+files, you would be wise to **only run `diagrams-haddock` on files
+under version control** so you can easily examine and (if necessary)
+undo the changes.  (Of course, being a conscientious developer, you
+would never work with source files not under version control, right?)
 
 ## Adding diagrams to source files
 
@@ -115,14 +124,122 @@ definition of `blueS`.
 
 ## Invoking diagrams-haddock
 
-XXX write about diagrams-haddock command-line tool and its options
+Invoking the `diagrams-haddock` tool is simple: you just give it a
+list of targets, like so:
 
-## Cabal setup
+```
+diagrams-haddock foo.hs baz/bar.lhs ~/src/some-cabal-directory
+```
 
-XXX how to set up your Cabal project to automatically copy the
-generated images along with the generated Haddock docs
+* For file targets, `diagrams-haddock` simply processes the given file.
+
+* Directory targets are assumed to contain Cabal packages, which
+  themselves contain a library. `diagrams-haddock` then finds and
+  processes the source files corresponding to all modules exported by
+  the library.  Note that `diagrams-haddock` does not currently run on
+  unexported modules or on the source code for executables, but if you
+  have a use case for either, just file a [feature
+  request](https://github.com/diagrams/diagrams-haddock/issues); they
+  shouldn't be too hard to add.
+
+`diagrams-haddock` also takes a few command-line options which can be
+used to customize its behavior:
+
+* `-c`, `--cachedir`: When diagrams are compiled, their source code is
+  hashed and the output stored in a file like `068fe.......342.svg`,
+  with the value of the hash as the name of the file.  This way, if
+  the source code for a diagram has not changed in between invocations
+  of `diagrams-haddock`, it does not need to be recompiled.  This
+  option lets you specify the directory where such cached SVG files
+  should be stored; the default is `.diagrams-cache`.
+
+* `-o`, `--outputdir`: This is the directory into which the final
+  output images will be produced.  The default is `diagrams`.
+
+* `-i`, `--includedirs`: `diagrams-haddock` does its best to process
+  files with CPP directives, even extracting information about where
+  to find `#include`s from the `.cabal` file, but sometimes it might
+  need a little help.  This option lets you specify additional
+  directories in which `diagrams-haddock` should look when searching
+  for `#include`d files.
+
+## Workflow and Cabal setup
+
+The recommended workflow for using `diagrams-haddock` is as follows:
+
+1. Include inline diagrams code and URLs in your source code.
+2. Run `diagrams-haddock`.
+3. Commit the resulting URL changes and produced SVG files.
+4. Arrange to have the SVG files installed along with your package's
+   Haddock documentation (more on this below).
+
+The point is that consumers of your library (such as Hackage) do not
+need to have `diagrams-haddock` installed in order to build your
+documentation.
+
+The generated SVG files need to be copied alongside the generated
+Haddock documentation.  There are two good ways to accomplish this:
+
+1. The `cabal` tool has recently acquired an `extra-html-files` field
+   (see https://github.com/haskell/cabal/pull/1182), specifying files
+   which should be copied in alongside generated Haddock
+   documentation.  So you could simply write something like
+
+     ```
+     extra-html-files: diagrams/*
+     ```
+
+     in your `.cabal` file.  Unfortunately it will still be a while
+     until this feature makes its way into a new release of `cabal`,
+     and yet a while after that until you can be sure that most people
+     who may want to build your package's documentation have the new
+     version.
+
+2. In the meantime, it is possible to take advantage of `cabal`'s
+   system of user hooks to manually cause the images to be copied
+   right after the Haddock documentation is generated.  Set
+   `build-type: Custom` in your `.cabal file`, and put something like
+   the following in your `Setup.hs`:
+
+    ``` haskell
+    import           Data.List                 (isSuffixOf)
+    import           Distribution.Simple
+    import           Distribution.Simple.Setup (Flag (..), HaddockFlags,
+						haddockDistPref)
+    import           Distribution.Simple.Utils (copyFiles)
+    import           Distribution.Text         (display)
+    import           Distribution.Verbosity    (normal)
+    import           System.Directory          (getDirectoryContents)
+    import           System.FilePath           ((</>))
+
+    -- Ugly hack, logic copied from Distribution.Simple.Haddock
+    haddockOutputDir :: Package pkg => HaddockFlags -> pkg -> FilePath
+    haddockOutputDir flags pkg = destDir
+       where
+	 baseDir = case haddockDistPref flags of
+			  NoFlag -> "."
+			  Flag x -> x
+	 destDir = baseDir </> "doc" </> "html" </> display (packageName pkg)
+
+    main :: IO ()
+    main = defaultMainWithHooks simpleUserHooks
+	     { postHaddock = \args flags pkg lbi -> do
+		 dias <- filter ("svg" `isSuffixOf`) `fmap` getDirectoryContents "diagrams"
+		 copyFiles normal (haddockOutputDir flags pkg)
+		   (map (\d -> ("", "diagrams" </> d)) dias)
+		 postHaddock simpleUserHooks args flags pkg lbi
+	     }
+    ```
+
+    It's not the prettiest, but it works!
 
 ## The diagrams-haddock library
 
-XXX note that it's also provided as a library so you can do whatever
-cool stuff you think up
+For most use cases, simply using the `diagrams-haddock` executable
+should get you what you want.  Note, however, that the internals are
+also exposed as a library, making it possible to do all sorts of crazy
+stuff you might dream up.
+
+## Reporting bugs
+
+Please report any bugs, feature requests, etc., on the [github issue tracker](https://github.com/diagrams/diagrams-haddock/issues).
