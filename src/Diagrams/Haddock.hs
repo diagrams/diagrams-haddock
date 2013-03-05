@@ -360,11 +360,13 @@ parseCodeBlocks file src =
 --
 --   In particular, the diagram will be output to @outDir/name.svg@,
 --   where @outDir@ is the second argument to @compileDiagram@, and
---   @name@ is the name of the diagram.  The updated URL will refer to
---   @name.svg@ (/not/ @outDir/name.svg@), under the assumption that
---   the contents of @outDir@ will be copied into the Haddock output
---   directory.  If for some reason you would like this scheme to be
---   more flexible/configurable, just yell.
+--   @name@ is the name of the diagram.  The updated URL will also
+--   refer to @outDir/name.svg@, under the assumption that @outDir@
+--   will be copied into the Haddock output directory. (For
+--   information on how to make this copying happen, see the README:
+--   <https://github.com/diagrams/diagrams-haddock/blob/master/README.md>.)
+--   If for some reason you would like this scheme to be more
+--   flexible/configurable, feel free to file a feature request.
 compileDiagram :: FilePath   -- ^ cache directory
                -> FilePath   -- ^ output directory
                -> [CodeBlock] -> DiagramURL -> IO (DiagramURL, Bool)
