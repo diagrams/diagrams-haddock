@@ -494,13 +494,9 @@ processHaddockDiagrams cacheDir outputDir file = do
     False -> return ["Error: " ++ file ++ " not found."]
     True  -> do
       src <- Strict.readFile file
-      go False src
-  where
-    go cpp src =
-      case runCE (parseModule file src) of
-        (Nothing, msgs) -> if not cpp && any (("Parse error: #" `elem`) . lines) msgs
-                             then runCpp src >>= go True
-                             else return msgs
+      r <- go src
+      case r of
+        (Nothing, msgs) -> return msgs
         (Just m , msgs) ->
           case P.parse parseDiagramURLs "" src of
             Left _     ->
@@ -510,4 +506,12 @@ processHaddockDiagrams cacheDir outputDir file = do
               let src' = displayDiagramURLs urls'
               when changed $ Cautiously.writeFile file src'
               return msgs
+  where
+    go src =
+      case runCE (parseModule file src) of
+        r@(Nothing, msgs) -> if any (("Parse error: #" `elem`) . lines) msgs
+                             then runCpp src >>= return . runCE . parseModule file
+                             else return r
+        r -> return r
     runCpp s = runCpphs defaultCpphsOptions "file" s
+
