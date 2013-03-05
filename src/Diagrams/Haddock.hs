@@ -310,7 +310,9 @@ makeCodeBlock file (s,l) =
       (indent 2 . lines $ showParseFailure loc err)
   where
     parseMode = defaultParseMode
-                { fixities = Nothing }
+                { fixities = Nothing
+                , extensions = MultiParamTypeClasses : haskell2010
+                }
     indent n  = map (replicate n ' ' ++)
     showBlock b
       | length ls > 5 = indent 2 (take 4 ls ++ ["..."])
@@ -387,6 +389,7 @@ parseModule fileName src =
     parseMode = defaultParseMode
                 { fixities      = Nothing
                 , parseFilename = fileName
+                , extensions    = MultiParamTypeClasses : haskell2010
                 }
 
 -- | Turn a 'ParsedModule' back into a String.
