@@ -42,7 +42,7 @@ diagramsHaddockOpts
   }
   &= program "diagrams-haddock"
   &= summary (unlines
-       [ "diagrams-haddock v" ++ showVersion version ++ ", (c) 2013 Brent Yorgey"
+       [ "diagrams-haddock v" ++ showVersion version ++ ", (c) 2013 diagrams-haddock team (see LICENSE)"
        , ""
        , "Compile inline diagrams code in Haddock documentation."
        , ""
