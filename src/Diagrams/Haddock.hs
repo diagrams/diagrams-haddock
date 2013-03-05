@@ -53,6 +53,13 @@ module Diagrams.Haddock
     , compileDiagrams
     , processHaddockDiagrams
 
+      -- * Utilities
+
+    , showParseFailure
+    , CollectErrors(..)
+    , failWith
+    , runCE
+
     ) where
 
 import           Prelude                         hiding (writeFile)
