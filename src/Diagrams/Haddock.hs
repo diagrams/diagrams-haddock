@@ -52,6 +52,7 @@ module Diagrams.Haddock
     , compileDiagram
     , compileDiagrams
     , processHaddockDiagrams
+    , processHaddockDiagrams'
 
       -- * Utilities
 
@@ -436,10 +437,21 @@ compileDiagrams cacheDir outputDir c urls = do
 processHaddockDiagrams
   :: FilePath   -- ^ cache directory
   -> FilePath   -- ^ output directory
-  -> [FilePath] -- ^ include directories
   -> FilePath   -- ^ file to be processed
   -> IO [String]
-processHaddockDiagrams cacheDir outputDir includeDirs file = do
+processHaddockDiagrams = processHaddockDiagrams' opts
+  where
+    opts = defaultCpphsOptions
+         { boolopts = defaultBoolOptions { hashline = False } }
+
+-- | Version of 'processHaddockDiagrams' that takes options for @cpphs@.
+processHaddockDiagrams'
+  :: CpphsOptions -- ^ Options for cpphs
+  -> FilePath     -- ^ cache directory
+  -> FilePath     -- ^ output directory
+  -> FilePath     -- ^ file to be processed
+  -> IO [String]
+processHaddockDiagrams' opts cacheDir outputDir file = do
   e   <- doesFileExist file
   case e of
     False -> return ["Error: " ++ file ++ " not found."]
@@ -465,7 +477,4 @@ processHaddockDiagrams cacheDir outputDir includeDirs file = do
                              else return r
         r -> return r
     runCpp s = runCpphs opts file s
-    opts = defaultCpphsOptions
-         { includes = includeDirs
-         , boolopts = defaultBoolOptions { hashline = False }
-         }
+

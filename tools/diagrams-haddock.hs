@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, TupleSections #-}
 module Main where
 
 import           Control.Monad                      (forM_, when)
@@ -14,6 +14,8 @@ import qualified Distribution.PackageDescription    as P
 import           Distribution.Simple.Configure      (maybeGetPersistBuildConfig)
 import           Distribution.Simple.LocalBuildInfo (localPkgDescr)
 
+import           Language.Preprocessor.Cpphs
+
 import           Paths_diagrams_haddock             (version)
 
 data DiagramsHaddock
@@ -21,6 +23,7 @@ data DiagramsHaddock
   { cacheDir    :: FilePath
   , outputDir   :: FilePath
   , includeDirs :: [FilePath]
+  , cppDefines  :: [String]
   , targets     :: [FilePath]
   }
   deriving (Show, Typeable, Data)
@@ -42,6 +45,11 @@ diagramsHaddockOpts
     = []
       &= typDir
       &= help "Include directory for CPP includes"
+
+  , cppDefines
+    = []
+      &= typ "NAME"
+      &= help "Preprocessor defines for CPP pass"
 
   , targets
     = def &= args &= typFile
@@ -70,7 +78,7 @@ main = do
     f <- doesFileExist targ
     case (d,f) of
       (True,_) -> processCabalPackage opts targ
-      (_,True) -> processFile opts targ
+      (_,True) -> processFile opts [] targ
       _        -> targetError targ
   when (null (targets opts)) $ processCabalPackage opts "."
 
@@ -93,34 +101,51 @@ processCabalPackage opts dir = do
         Nothing -> return ()
         Just lib -> do
           let buildInfo = P.libBuildInfo lib
-          let srcDirs = P.hsSourceDirs buildInfo
-          let includes = P.includeDirs buildInfo
-          let opts' = opts { includeDirs = includeDirs opts ++ includes }
-          mapM_ (tryProcessFile opts' dir srcDirs) . map toFilePath . P.exposedModules $ lib
+              srcDirs   = P.hsSourceDirs buildInfo
+              includes  = P.includeDirs buildInfo
+              defines   = P.cppOptions buildInfo
+              opts' = opts 
+                    { includeDirs = includeDirs opts ++ includes 
+                    }
+              cabalDefines = parseCabalDefines defines
+          mapM_ (tryProcessFile opts' cabalDefines dir srcDirs) . map toFilePath . P.exposedModules $ lib
 
   where distDir = dir </> "dist"
+
+-- | Use @cpphs@'s options parser to handle the options from cabal.
+parseCabalDefines :: [String] -> [(String,String)]
+parseCabalDefines = either (const []) defines . parseOptions
+
 
 -- | Try to find and process a file corresponding to a module exported
 --   from a library.
 tryProcessFile
   :: DiagramsHaddock   -- ^ options
+  -> [(String,String)] -- ^ additional defines
   -> FilePath          -- ^ base directory
   -> [FilePath]        -- ^ haskell-src-dirs
   -> FilePath          -- ^ name of the module to look for, in \"A/B/C\" form
   -> IO ()
-tryProcessFile opts dir srcDirs fileBase = do
+tryProcessFile opts defines dir srcDirs fileBase = do
   let files = [ dir </> srcDir </> fileBase <.> ext
               | srcDir <- srcDirs
               , ext <- ["hs", "lhs"]
               ]
   forM_ files $ \f -> do
     e <- doesFileExist f
-    when e $ processFile opts f
+    when e $ processFile opts defines f
 
 -- | Process a single file with diagrams-haddock.
-processFile :: DiagramsHaddock -> FilePath -> IO ()
-processFile opts file = do
-  errs <- processHaddockDiagrams (cacheDir opts) (outputDir opts) (includeDirs opts) file
-  case errs of
-    [] -> return ()
-    _  -> putStrLn $ intercalate "\n" errs
+processFile :: DiagramsHaddock -> [(String,String)] -> FilePath -> IO ()
+processFile opts defines file = do
+    errs <- processHaddockDiagrams' cpphsOpts (cacheDir opts) (outputDir opts) file
+    case errs of
+      [] -> return ()
+      _  -> putStrLn $ intercalate "\n" errs
+  where
+    cpphsOpts = defaultCpphsOptions
+              { includes = includeDirs opts
+              , defines  = map (,"") (cppDefines opts) ++ defines
+              , boolopts = defaultBoolOptions { hashline = False }
+              }  
+
