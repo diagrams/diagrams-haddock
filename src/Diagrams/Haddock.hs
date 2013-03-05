@@ -53,7 +53,6 @@ module Diagrams.Haddock
 
     , ParsedModule(..)
     , parseModule
-    , displayModule
 
       -- * Diagram compilation
       -- $diagrams
@@ -393,10 +392,6 @@ parseModule file src =
                 , parseFilename = file
                 , extensions    = MultiParamTypeClasses : haskell2010
                 }
-
--- | Turn a 'ParsedModule' back into a String.
-displayModule :: ParsedModule -> String
-displayModule (ParsedModule m cs _) = exactPrint m (map collapseComment cs)
 
 ------------------------------------------------------------
 -- Diagrams
