@@ -47,8 +47,10 @@ Executable diagrams-haddock
   main-is:             diagrams-haddock.hs
   build-depends:       base,
                        directory,
+                       filepath,
                        diagrams-haddock,
-                       cmdargs >= 0.8 && < 0.11
+                       cmdargs >= 0.8 && < 0.11,
+                       Cabal >= 1.14 && < 1.18
   hs-source-dirs:      tools
   default-language:    Haskell2010
 
