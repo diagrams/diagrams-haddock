@@ -319,7 +319,7 @@ extractCodeBlocks file (s,l)
   . lines
   $ s
   where
-    isBird = ("> " `isPrefixOf`) . dropWhile isSpace
+    isBird = ((||) <$> (">"==) <*> ("> " `isPrefixOf`)) . dropWhile isSpace
 
 -- | Take the contents of a Haskell source file (and the name of the
 --   file, for error reporting purposes), and extract all the code
