@@ -194,14 +194,23 @@ Haddock documentation.  There are two good ways to accomplish this:
 
      in your `.cabal` file.  Unfortunately, it will still be a while
      until this feature makes its way into a new release of `cabal`,
-     and yet longer before you can be sure that most people
-     who may want to build your package's documentation have the new
-     version.
+     and yet longer before you can be sure that most people who may
+     want to build your package's documentation have the new version.
+     So this is currently a good option only if you have the HEAD
+     version of `cabal` and don't care about others being able to
+     build your documentation.  However, in the not-too-distant future
+     this will become the best option.
 
 2. In the meantime, it is possible to take advantage of `cabal`'s
    system of user hooks to manually copy the images right after the
-   Haddock documentation is generated.  Set `build-type: Custom` in
-   your `.cabal file`, and put something like the following in your
+   Haddock documentation is generated.  Add something like
+
+    ```
+    build-type: Custom
+    extra-source-files: diagrams/*
+    ```
+
+    to your `.cabal` file, and then put something like the following in your
    `Setup.hs`:
 
     ``` haskell
@@ -224,12 +233,14 @@ Haddock documentation.  There are two good ways to accomplish this:
                           Flag x -> x
          destDir = baseDir </> "doc" </> "html" </> display (packageName pkg)
 
+    diagramsDir = "diagrams"
+
     main :: IO ()
     main = defaultMainWithHooks simpleUserHooks
              { postHaddock = \args flags pkg lbi -> do
-                 dias <- filter ("svg" `isSuffixOf`) `fmap` getDirectoryContents "diagrams"
+                 dias <- filter ("svg" `isSuffixOf`) `fmap` getDirectoryContents diagramsDir
                  copyFiles normal (haddockOutputDir flags pkg)
-                   (map (\d -> ("", "diagrams" </> d)) dias)
+                   (map (\d -> ("", diagramsDir </> d)) dias)
                  postHaddock simpleUserHooks args flags pkg lbi
              }
     ```
