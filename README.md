@@ -247,6 +247,13 @@ Haddock documentation.  There are two good ways to accomplish this:
 
     It may not be pretty, but it works!
 
+## File encodings
+
+For now, `diagrams-haddock` assumes that all `.hs` and `.lhs` files
+are encoded using UTF-8.  If you would like to use it with source
+files stored using some other encoding, feel free to [file a feature
+request](https://github.com/diagrams/diagrams-haddock/issues).
+
 ## The diagrams-haddock library
 
 For most use cases, simply using the `diagrams-haddock` executable
