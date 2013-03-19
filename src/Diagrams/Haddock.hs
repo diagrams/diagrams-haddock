@@ -63,9 +63,6 @@ module Diagrams.Haddock
 
     ) where
 
-import           Prelude                         hiding (writeFile)
-import qualified System.IO.Cautious              as Cautiously
-
 import           Control.Applicative             hiding (many, (<|>))
 import           Control.Arrow                   (first, (&&&), (***))
 import           Control.Lens                    hiding ((<.>))
@@ -81,6 +78,8 @@ import           Data.List.Split                 (dropBlanks, dropDelims, split,
 import qualified Data.Map                        as M
 import           Data.Maybe                      (catMaybes, mapMaybe)
 import qualified Data.Set                        as S
+import qualified Data.Text.Lazy                  as T
+import qualified Data.Text.Lazy.Encoding         as T
 import           Data.VectorSpace                (zeroV)
 import           Language.Haskell.Exts.Annotated hiding (loc)
 import qualified Language.Haskell.Exts.Annotated as HSE
@@ -89,6 +88,8 @@ import           System.Directory                (copyFile,
                                                   createDirectoryIfMissing,
                                                   doesFileExist)
 import           System.FilePath                 ((<.>), (</>))
+import qualified System.IO                       as IO
+import qualified System.IO.Cautious              as Cautiously
 import qualified System.IO.Strict                as Strict
 import           Text.Blaze.Svg.Renderer.Utf8    (renderSvg)
 import           Text.Parsec
@@ -464,7 +465,10 @@ processHaddockDiagrams' opts cacheDir outputDir file = do
   case e of
     False -> return ["Error: " ++ file ++ " not found."]
     True  -> do
-      src <- Strict.readFile file
+      -- always assume UTF-8, to make our lives simpler!
+      h <- IO.openFile file IO.ReadMode
+      IO.hSetEncoding h IO.utf8
+      src <- Strict.hGetContents h
       r <- go src
       case r of
         (Nothing,       msgs) -> return msgs
@@ -475,7 +479,12 @@ processHaddockDiagrams' opts cacheDir outputDir file = do
             Right urls -> do
               (urls', changed) <- compileDiagrams cacheDir outputDir ds cs urls
               let src' = displayDiagramURLs urls'
-              when changed $ Cautiously.writeFile file src'
+
+              -- See https://github.com/diagrams/diagrams-haddock/issues/8:
+              -- Cautiously.writeFile truncates chars to 8 bits.  So
+              -- we do the encoding to UTF-8 ourselves and then call
+              -- writeFileL.
+              when changed $ Cautiously.writeFileL file (T.encodeUtf8 . T.pack $ src')
               return msgs
   where
     go src =
