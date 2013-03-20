@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
 -----------------------------------------------------------------------------
 -- |
@@ -41,10 +42,12 @@ module Diagrams.Haddock
       -- $codeblocks
 
     , CodeBlock(..)
+    , codeBlockCode, codeBlockIdents, codeBlockBindings
     , makeCodeBlock
     , collectBindings
     , extractCodeBlocks
     , parseCodeBlocks
+    , transitiveClosure
 
       -- * Diagram compilation
       -- $diagrams
@@ -74,8 +77,9 @@ import qualified Data.ByteString.Lazy            as BS
 import           Data.Char                       (isSpace)
 import           Data.Either                     (lefts, rights)
 import           Data.Function                   (on)
+import           Data.Generics.Uniplate.Data     (universeBi)
 import           Data.List                       (groupBy, intercalate,
-                                                  isPrefixOf)
+                                                  isPrefixOf, partition)
 import           Data.List.Split                 (dropBlanks, dropDelims, split,
                                                   whenElt)
 import qualified Data.Map                        as M
@@ -256,7 +260,8 @@ coalesceComments
 data CodeBlock
     = CodeBlock
       { _codeBlockCode     :: String
-      , _codeBlockBindings :: [String]
+      , _codeBlockIdents   :: S.Set String
+      , _codeBlockBindings :: S.Set String
       }
   deriving (Show, Eq)
 
@@ -270,7 +275,9 @@ makeLenses ''CodeBlock
 makeCodeBlock :: FilePath -> (String,Int) -> CollectErrors (Maybe CodeBlock)
 makeCodeBlock file (s,l) =
   case HSE.parseFileContentsWithMode parseMode s of
-    ParseOk m           -> return . Just $ CodeBlock s (collectBindings m)
+    ParseOk m           -> return . Just $ CodeBlock s
+                                             (collectIdents m)
+                                             (collectBindings m)
     ParseFailed loc err -> failWith . unlines $
       [ file ++ ": " ++ show l ++ ": Warning: could not parse code block:" ]
       ++
@@ -291,9 +298,9 @@ makeCodeBlock file (s,l) =
       where ls = lines b
 
 -- | Collect the list of names bound in a module.
-collectBindings :: Module l -> [String]
-collectBindings (Module _ _ _ _ decls) = mapMaybe getBinding decls
-collectBindings _ = []
+collectBindings :: Module l -> S.Set String
+collectBindings (Module _ _ _ _ decls) = S.fromList $ mapMaybe getBinding decls
+collectBindings _ = S.empty
 
 getBinding :: Decl l -> Maybe String
 getBinding (FunBind _ [])                     = Nothing
@@ -304,6 +311,18 @@ getBinding _                                  = Nothing
 getName :: Name l -> String
 getName (Ident _ s)  = s
 getName (Symbol _ s) = s
+
+getQName :: QName l -> Maybe String
+getQName (Qual _ _ n) = Just $ getName n
+getQName (UnQual _ n) = Just $ getName n
+getQName _          = Nothing
+
+-- | Collect the list of referenced identifiers in a module.
+collectIdents :: Module SrcSpanInfo -> S.Set String
+collectIdents m = S.fromList . catMaybes $
+                    [ getQName n
+                    | (Var _ n :: Exp SrcSpanInfo) <- universeBi m
+                    ]
 
 -- | From a @String@ representing a comment (along with its beginning
 --   line number, and the name of the file it came from, for error
@@ -323,19 +342,17 @@ extractCodeBlocks file (s,l)
 
 -- | Take the contents of a Haskell source file (and the name of the
 --   file, for error reporting purposes), and extract all the code
---   blocks which are referenced from diagram URLs.
+--   blocks.
 parseCodeBlocks :: FilePath -> String -> CollectErrors (Maybe [CodeBlock])
 parseCodeBlocks file src =
   case HSE.parseFileContentsWithComments parseMode src of
     ParseFailed loc err -> failWith $ showParseFailure loc err
     ParseOk (_, cs)     -> do
-      allBlocks <- fmap concat
-                   . mapM (extractCodeBlocks file)
-                   . coalesceComments
-                   $ cs
+      blocks <- fmap concat
+                . mapM (extractCodeBlocks file)
+                . coalesceComments
+                $ cs
       let diaNames  = S.unions . map getDiagramNames $ cs
-          blocks    = filter (any (`S.member` diaNames) . view codeBlockBindings)
-                             allBlocks
       return . Just $ blocks
   where
     parseMode = defaultParseMode
@@ -343,6 +360,20 @@ parseCodeBlocks file src =
                 , parseFilename = file
                 , extensions    = MultiParamTypeClasses : haskell2010
                 }
+
+-- | Given an identifier and a list of CodeBlocks, filter the list of
+--   CodeBlocks to the transitive closure of the "depends-on"
+--   relation, /i.e./ only blocks which bind identifiers referenced in
+--   blocks ultimately needed by the block which defines the desired
+--   identifier.
+transitiveClosure :: String -> [CodeBlock] -> [CodeBlock]
+transitiveClosure ident blocks = tc [ident] blocks
+  where
+    tc _ [] = []
+    tc [] _ = []
+    tc (i:is) blocks =
+        let (ins,outs) = partition (\cb -> i `S.member` (cb ^. codeBlockBindings)) blocks
+        in  ins ++ tc (is ++ concatMap (S.toList . view codeBlockIdents) ins) outs
 
 ------------------------------------------------------------
 -- Diagrams
@@ -383,11 +414,12 @@ compileDiagram cacheDir outputDir code url = do
       oldURL = (url, False)
       newURL = (url & diagramURL .~ outFile, outFile /= url^.diagramURL)
 
+      neededCode = transitiveClosure (url ^. diagramName) code
   res <- buildDiagram
            SVG
            zeroV
            (SVGOptions (mkSizeSpec w h))
-           (map (view codeBlockCode) code)
+           (map (view codeBlockCode) neededCode)
            (url ^. diagramName)
            []
            [ "Diagrams.Backend.SVG" ]
