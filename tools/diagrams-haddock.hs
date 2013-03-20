@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveDataTypeable, TupleSections #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE TupleSections      #-}
 module Main where
 
 import           Control.Monad                      (forM_, when)
@@ -20,7 +21,8 @@ import           Paths_diagrams_haddock             (version)
 
 data DiagramsHaddock
   = DiagramsHaddock
-  { cacheDir    :: FilePath
+  { quiet       :: Bool
+  , cacheDir    :: FilePath
   , outputDir   :: FilePath
   , includeDirs :: [FilePath]
   , cppDefines  :: [String]
@@ -31,7 +33,10 @@ data DiagramsHaddock
 diagramsHaddockOpts :: DiagramsHaddock
 diagramsHaddockOpts
   = DiagramsHaddock
-  { cacheDir
+  { quiet = False
+    &= help "Suppress normal logging output"
+
+  , cacheDir
     = ".diagrams-cache"
       &= typDir
       &= help "Directory for storing cached diagrams (default: .diagrams-cache)"
@@ -104,8 +109,8 @@ processCabalPackage opts dir = do
               srcDirs   = P.hsSourceDirs buildInfo
               includes  = P.includeDirs buildInfo
               defines   = P.cppOptions buildInfo
-              opts' = opts 
-                    { includeDirs = includeDirs opts ++ includes 
+              opts' = opts
+                    { includeDirs = includeDirs opts ++ includes
                     }
               cabalDefines = parseCabalDefines defines
           mapM_ (tryProcessFile opts' cabalDefines dir srcDirs) . map toFilePath . P.exposedModules $ lib
@@ -138,7 +143,7 @@ tryProcessFile opts defines dir srcDirs fileBase = do
 -- | Process a single file with diagrams-haddock.
 processFile :: DiagramsHaddock -> [(String,String)] -> FilePath -> IO ()
 processFile opts defines file = do
-    errs <- processHaddockDiagrams' cpphsOpts (cacheDir opts) (outputDir opts) file
+    errs <- processHaddockDiagrams' cpphsOpts (quiet opts) (cacheDir opts) (outputDir opts) file
     case errs of
       [] -> return ()
       _  -> putStrLn $ intercalate "\n" errs
@@ -147,5 +152,4 @@ processFile opts defines file = do
               { includes = includeDirs opts
               , defines  = map (,"") (cppDefines opts) ++ defines
               , boolopts = defaultBoolOptions { hashline = False }
-              }  
-
+              }

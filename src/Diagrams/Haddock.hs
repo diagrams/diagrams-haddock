@@ -401,11 +401,12 @@ transitiveClosure ident blocks = tc [ident] blocks
 --   <https://github.com/diagrams/diagrams-haddock/blob/master/README.md>.)
 --   If for some reason you would like this scheme to be more
 --   flexible/configurable, feel free to file a feature request.
-compileDiagram :: FilePath   -- ^ cache directory
+compileDiagram :: Bool       -- ^ @True@ = quiet
+               -> FilePath   -- ^ cache directory
                -> FilePath   -- ^ output directory
                -> S.Set String -- ^ diagrams referenced from URLs
                -> [CodeBlock] -> DiagramURL -> IO (DiagramURL, Bool)
-compileDiagram cacheDir outputDir ds code url
+compileDiagram quiet cacheDir outputDir ds code url
     -- See https://github.com/diagrams/diagrams-haddock/issues/7 .
   | (url ^. diagramName) `S.notMember` ds = return (url, False)
 
@@ -423,6 +424,8 @@ compileDiagram cacheDir outputDir ds code url
           newURL = (url & diagramURL .~ outFile, outFile /= url^.diagramURL)
 
           neededCode = transitiveClosure (url ^. diagramName) code
+
+      logStr $ (url ^. diagramName) ++ "..."
 
       res <- buildDiagram
                SVG
@@ -446,25 +449,30 @@ compileDiagram cacheDir outputDir ds code url
           return oldURL
         Skipped hash    -> do
           copyFile (mkCached hash) outFile
+          logStrLn ""
           return newURL
         OK hash svg     -> do
           let cached = mkCached hash
           BS.writeFile cached (renderSvg svg)
           copyFile cached outFile
+          logStrLn "compiled."
           return newURL
 
  where
    mkCached base = cacheDir </> base <.> "svg"
+   logStr   = when (not quiet) . putStr
+   logStrLn = when (not quiet) . putStrLn
 
 -- | Compile all the diagrams referenced in an entire module.
-compileDiagrams :: FilePath      -- ^ cache directory
+compileDiagrams :: Bool          -- ^ @True@ = quiet
+                -> FilePath      -- ^ cache directory
                 -> FilePath      -- ^ output directory
                 -> S.Set String  -- ^ diagram names referenced from URLs
                 -> [CodeBlock]
                 -> [Either String DiagramURL] -> IO ([Either String DiagramURL], Bool)
-compileDiagrams cacheDir outputDir ds cs urls = do
+compileDiagrams quiet cacheDir outputDir ds cs urls = do
   urls' <- urls & (traverse . _Right)
-                %%~ compileDiagram cacheDir outputDir ds cs
+                %%~ compileDiagram quiet cacheDir outputDir ds cs
   let changed = orOf (traverse . _Right . _2) urls'
   return (urls' & (traverse . _Right) %~ fst, changed)
 
@@ -477,7 +485,8 @@ compileDiagrams cacheDir outputDir ds cs urls = do
 --
 --   Returns a list of warnings and/or errors.
 processHaddockDiagrams
-  :: FilePath   -- ^ cache directory
+  :: Bool       -- ^ quiet
+  -> FilePath   -- ^ cache directory
   -> FilePath   -- ^ output directory
   -> FilePath   -- ^ file to be processed
   -> IO [String]
@@ -489,11 +498,12 @@ processHaddockDiagrams = processHaddockDiagrams' opts
 -- | Version of 'processHaddockDiagrams' that takes options for @cpphs@.
 processHaddockDiagrams'
   :: CpphsOptions -- ^ Options for cpphs
+  -> Bool         -- ^ quiet
   -> FilePath     -- ^ cache directory
   -> FilePath     -- ^ output directory
   -> FilePath     -- ^ file to be processed
   -> IO [String]
-processHaddockDiagrams' opts cacheDir outputDir file = do
+processHaddockDiagrams' opts quiet cacheDir outputDir file = do
   e   <- doesFileExist file
   case e of
     False -> return ["Error: " ++ file ++ " not found."]
@@ -510,7 +520,7 @@ processHaddockDiagrams' opts cacheDir outputDir file = do
             Left _     ->
               error "This case can never happen; see prop_parseDiagramURLs_succeeds"
             Right urls -> do
-              (urls', changed) <- compileDiagrams cacheDir outputDir ds cs urls
+              (urls', changed) <- compileDiagrams quiet cacheDir outputDir ds cs urls
               let src' = displayDiagramURLs urls'
 
               -- See https://github.com/diagrams/diagrams-haddock/issues/8:
