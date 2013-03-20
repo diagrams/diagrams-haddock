@@ -66,9 +66,6 @@ module Diagrams.Haddock
 
     ) where
 
-import           Prelude                         hiding (writeFile)
-import qualified System.IO.Cautious              as Cautiously
-
 import           Control.Applicative             hiding (many, (<|>))
 import           Control.Arrow                   (first, (&&&), (***))
 import           Control.Lens                    hiding ((<.>))
@@ -85,6 +82,8 @@ import           Data.List.Split                 (dropBlanks, dropDelims, split,
 import qualified Data.Map                        as M
 import           Data.Maybe                      (catMaybes, mapMaybe)
 import qualified Data.Set                        as S
+import qualified Data.Text.Lazy                  as T
+import qualified Data.Text.Lazy.Encoding         as T
 import           Data.VectorSpace                (zeroV)
 import           Language.Haskell.Exts.Annotated hiding (loc)
 import qualified Language.Haskell.Exts.Annotated as HSE
@@ -93,6 +92,8 @@ import           System.Directory                (copyFile,
                                                   createDirectoryIfMissing,
                                                   doesFileExist)
 import           System.FilePath                 ((<.>), (</>))
+import qualified System.IO                       as IO
+import qualified System.IO.Cautious              as Cautiously
 import qualified System.IO.Strict                as Strict
 import           Text.Blaze.Svg.Renderer.Utf8    (renderSvg)
 import           Text.Parsec
@@ -342,8 +343,8 @@ extractCodeBlocks file (s,l)
 
 -- | Take the contents of a Haskell source file (and the name of the
 --   file, for error reporting purposes), and extract all the code
---   blocks.
-parseCodeBlocks :: FilePath -> String -> CollectErrors (Maybe [CodeBlock])
+--   blocks, as well as the referenced diagram names.
+parseCodeBlocks :: FilePath -> String -> CollectErrors (Maybe ([CodeBlock], S.Set String))
 parseCodeBlocks file src =
   case HSE.parseFileContentsWithComments parseMode src of
     ParseFailed loc err -> failWith $ showParseFailure loc err
@@ -353,7 +354,8 @@ parseCodeBlocks file src =
                 . coalesceComments
                 $ cs
       let diaNames  = S.unions . map getDiagramNames $ cs
-      return . Just $ blocks
+
+      return . Just $ (blocks, diaNames)
   where
     parseMode = defaultParseMode
                 { fixities      = Nothing
@@ -401,48 +403,55 @@ transitiveClosure ident blocks = tc [ident] blocks
 --   flexible/configurable, feel free to file a feature request.
 compileDiagram :: FilePath   -- ^ cache directory
                -> FilePath   -- ^ output directory
+               -> S.Set String -- ^ diagrams referenced from URLs
                -> [CodeBlock] -> DiagramURL -> IO (DiagramURL, Bool)
-compileDiagram cacheDir outputDir code url = do
-  createDirectoryIfMissing True outputDir
-  createDirectoryIfMissing True cacheDir
+compileDiagram cacheDir outputDir ds code url
+    -- See https://github.com/diagrams/diagrams-haddock/issues/7 .
+  | (url ^. diagramName) `S.notMember` ds = return (url, False)
 
-  let outFile = outputDir </> (url ^. diagramName) <.> "svg"
+    -- The normal case.
+  | otherwise = do
+      createDirectoryIfMissing True outputDir
+      createDirectoryIfMissing True cacheDir
 
-      w = read <$> M.lookup "width" (url ^. diagramOpts)
-      h = read <$> M.lookup "height" (url ^. diagramOpts)
+      let outFile = outputDir </> (url ^. diagramName) <.> "svg"
 
-      oldURL = (url, False)
-      newURL = (url & diagramURL .~ outFile, outFile /= url^.diagramURL)
+          w = read <$> M.lookup "width" (url ^. diagramOpts)
+          h = read <$> M.lookup "height" (url ^. diagramOpts)
 
-      neededCode = transitiveClosure (url ^. diagramName) code
-  res <- buildDiagram
-           SVG
-           zeroV
-           (SVGOptions (mkSizeSpec w h))
-           (map (view codeBlockCode) neededCode)
-           (url ^. diagramName)
-           []
-           [ "Diagrams.Backend.SVG" ]
-           (hashedRegenerate (\_ opts -> opts) cacheDir)
+          oldURL = (url, False)
+          newURL = (url & diagramURL .~ outFile, outFile /= url^.diagramURL)
 
-  case res of
-    -- XXX incorporate these into error reporting framework instead of printing
-    ParseErr err    -> do
-      putStrLn ("Parse error:")
-      putStrLn err
-      return oldURL
-    InterpErr ierr  -> do
-      putStrLn ("Interpreter error:")
-      putStrLn (ppInterpError ierr)
-      return oldURL
-    Skipped hash    -> do
-      copyFile (mkCached hash) outFile
-      return newURL
-    OK hash svg     -> do
-      let cached = mkCached hash
-      BS.writeFile cached (renderSvg svg)
-      copyFile cached outFile
-      return newURL
+          neededCode = transitiveClosure (url ^. diagramName) code
+
+      res <- buildDiagram
+               SVG
+               zeroV
+               (SVGOptions (mkSizeSpec w h))
+               (map (view codeBlockCode) neededCode)
+               (url ^. diagramName)
+               []
+               [ "Diagrams.Backend.SVG" ]
+               (hashedRegenerate (\_ opts -> opts) cacheDir)
+
+      case res of
+        -- XXX incorporate these into error reporting framework instead of printing
+        ParseErr err    -> do
+          putStrLn ("Parse error:")
+          putStrLn err
+          return oldURL
+        InterpErr ierr  -> do
+          putStrLn ("Interpreter error:")
+          putStrLn (ppInterpError ierr)
+          return oldURL
+        Skipped hash    -> do
+          copyFile (mkCached hash) outFile
+          return newURL
+        OK hash svg     -> do
+          let cached = mkCached hash
+          BS.writeFile cached (renderSvg svg)
+          copyFile cached outFile
+          return newURL
 
  where
    mkCached base = cacheDir </> base <.> "svg"
@@ -450,11 +459,12 @@ compileDiagram cacheDir outputDir code url = do
 -- | Compile all the diagrams referenced in an entire module.
 compileDiagrams :: FilePath      -- ^ cache directory
                 -> FilePath      -- ^ output directory
+                -> S.Set String  -- ^ diagram names referenced from URLs
                 -> [CodeBlock]
                 -> [Either String DiagramURL] -> IO ([Either String DiagramURL], Bool)
-compileDiagrams cacheDir outputDir c urls = do
+compileDiagrams cacheDir outputDir ds cs urls = do
   urls' <- urls & (traverse . _Right)
-                %%~ compileDiagram cacheDir outputDir c
+                %%~ compileDiagram cacheDir outputDir ds cs
   let changed = orOf (traverse . _Right . _2) urls'
   return (urls' & (traverse . _Right) %~ fst, changed)
 
@@ -488,18 +498,26 @@ processHaddockDiagrams' opts cacheDir outputDir file = do
   case e of
     False -> return ["Error: " ++ file ++ " not found."]
     True  -> do
-      src <- Strict.readFile file
+      -- always assume UTF-8, to make our lives simpler!
+      h <- IO.openFile file IO.ReadMode
+      IO.hSetEncoding h IO.utf8
+      src <- Strict.hGetContents h
       r <- go src
       case r of
-        (Nothing, msgs) -> return msgs
-        (Just c , msgs) ->
+        (Nothing,       msgs) -> return msgs
+        (Just (cs, ds), msgs) ->
           case P.parse parseDiagramURLs "" src of
             Left _     ->
               error "This case can never happen; see prop_parseDiagramURLs_succeeds"
             Right urls -> do
-              (urls', changed) <- compileDiagrams cacheDir outputDir c urls
+              (urls', changed) <- compileDiagrams cacheDir outputDir ds cs urls
               let src' = displayDiagramURLs urls'
-              when changed $ Cautiously.writeFile file src'
+
+              -- See https://github.com/diagrams/diagrams-haddock/issues/8:
+              -- Cautiously.writeFile truncates chars to 8 bits.  So
+              -- we do the encoding to UTF-8 ourselves and then call
+              -- writeFileL.
+              when changed $ Cautiously.writeFileL file (T.encodeUtf8 . T.pack $ src')
               return msgs
   where
     go src =
@@ -509,4 +527,3 @@ processHaddockDiagrams' opts cacheDir outputDir file = do
                              else return r
         r -> return r
     runCpp s = runCpphs opts file s
-
