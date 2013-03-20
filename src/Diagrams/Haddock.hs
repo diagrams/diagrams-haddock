@@ -426,6 +426,7 @@ compileDiagram quiet cacheDir outputDir ds code url
           neededCode = transitiveClosure (url ^. diagramName) code
 
       logStr $ (url ^. diagramName) ++ "..."
+      IO.hFlush IO.stdout
 
       res <- buildDiagram
                SVG
