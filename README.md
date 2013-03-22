@@ -1,12 +1,12 @@
 # diagrams-haddock
 
-`diagrams-haddock` is a preprocessor which allows embedding images in
-Haddock documentation generated using the
-[diagrams framework](http://projects.haskell.org/diagrams/).  The code
-to generate images is embedded directly within the source file itself
-(and the code can be included in the Haddock output or not, as you
-wish).  `diagrams-haddock` takes care of generating SVG images and
-linking them into the Haddock output.
+`diagrams-haddock` is a preprocessor which allows embedding images
+generated using the [diagrams
+framework](http://projects.haskell.org/diagrams/) within Haddock
+documentation .  The code to generate images is embedded directly
+within the source file itself (and the code can be included in the
+Haddock output or not, as you wish).  `diagrams-haddock` takes care of
+generating SVG images and linking them into the Haddock output.
 
 ## Installing
 
