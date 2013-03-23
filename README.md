@@ -173,6 +173,13 @@ used to customize its behavior:
   directories in which `diagrams-haddock` should look when searching
   for `#include`d files.
 
+* `--cppdefines`: likewise, this option allows you to specify
+  additional names that should be `#define`d when CPP is run.
+
+* `-q`, `--quiet`: `diagrams-haddock` normally prints some logging
+  information to indicate what it is doing; this option silences the
+  output.
+
 ## Workflow and Cabal setup
 
 The recommended workflow for using `diagrams-haddock` is as follows:
