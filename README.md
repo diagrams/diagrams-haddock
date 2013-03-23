@@ -3,7 +3,7 @@
 `diagrams-haddock` is a preprocessor which allows embedding images
 generated using the [diagrams
 framework](http://projects.haskell.org/diagrams/) within Haddock
-documentation .  The code to generate images is embedded directly
+documentation.  The code to generate images is embedded directly
 within the source file itself (and the code can be included in the
 Haddock output or not, as you wish).  `diagrams-haddock` takes care of
 generating SVG images and linking them into the Haddock output.
@@ -27,12 +27,13 @@ will know why.
 
 ## An important caveat
 
-`diagrams-haddock` modifies files *in place*.  While every effort has
-been made to ensure that it cannot make catastrophic changes to your
-files, you would be wise to **only run `diagrams-haddock` on files
-under version control** so you can easily examine and (if necessary)
-undo the changes.  (Of course, being a conscientious developer, you
-would never work with source files not under version control, right?)
+`diagrams-haddock` modifies files *in place*!  While we have worked
+hard to ensure that it cannot make catastrophic changes to your files,
+you would be wise to **only run `diagrams-haddock` on files under
+version control** so you can easily examine and (if necessary) undo
+the changes it makes.  (Of course, being a conscientious developer,
+you would never work with source files not under version control,
+right?)
 
 ## Adding diagrams to source files
 
@@ -67,14 +68,24 @@ the code block defining `mySquare` can be anywhere in the same file;
 it does not have to be right before or right after the diagram URL
 referencing it.
 
-## More on code blocks
+## Code block dependency analysis
 
-There are two important things to realize about the way
-`diagrams-haddock` processes code blocks containing diagram
-definitions.
+`diagrams-haddock` does a simple dependency analysis to determine
+which code blocks should be in scope while compiling each diagram.
+First, it locates a code block containing a binding for the requested
+diagram name.  Then, it pulls in any code blocks containing bindings
+for identifiers referenced by this code block, and so on transitively.
+(Note that this analysis is overly simplistic and does not take things
+like shadowing into account; this may sometimes cause additional code
+blocks to be included which would not be included with a more careful
+analysis.)
 
-The first is that **`diagrams-haddock` only looks at code blocks which
-contain a binding** referenced in a diagram URL.  For example:
+This has a few implications.  First, code blocks containing irrelevant
+bindings will not be considered.  It is common to have code blocks
+which are intended simply to show some example code---they may not
+even be valid Haskell.  However, as long as such code blocks do not
+contain any bindings of names used by a diagram, they will be ignored.
+For example:
 
 ``` haskell
 -- The algorithm works by doing the equivalent of
@@ -92,21 +103,18 @@ contain a binding** referenced in a diagram URL.  For example:
 
 The first code block shown above (beginning `rep = ...`) contains some
 bindings, but none of those bindings are referenced by any diagram
-URLs, so the code block is not considered when generating diagrams.
+URLs, so the code block is ignored.
 
-The second is that **all code blocks with referenced bindings are in
-scope** when interpreting *each* diagram.  This means that you can
-write some generic code which can be reused in the definition of many
-different diagrams, *as long as* you include that generic code in the
-same code block with some referenced binding.  For example:
+Another convenient implication is that supporting code can be put in
+separate code blocks and even shared between diagrams.  For example:
 
 ``` haskell
+-- > makeitblue d = d # fc blue # lc blue
+--
 -- Here is a blue circle:
 --
 -- <<dummy#diagram=blueC&width=200>>
 --
--- > makeitblue d = d # fc blue # lc blue
--- >
 -- > blueC = circle 1 # makeitblue
 --
 -- And here is a blue square:
@@ -116,15 +124,14 @@ same code block with some referenced binding.  For example:
 -- > blueS = square 1 # makeitblue
 ```
 
-The two code blocks are selected since they both contain referenced
-bindings (`blueC` and `blueS`), and their entire combined contents are
-in scope while interpreting each diagram.  In particular this means
-that the definition of `makeitblue` is available to be used in the
-definition of `blueS`.
+This also means that diagrams are recompiled only when necessary.  For
+example, if the definition of `blueC` is changed, only `blueC` will be
+recompiled.  If the definition of `makeitblue` is changed, both
+`blueC` and `blueS` will be recompiled.
 
 ## Invoking diagrams-haddock
 
-Invoking the `diagrams-haddock` tool is simple: you just give it a
+Invoking the `diagrams-haddock` tool is simple: just give it a
 list of targets, like so:
 
 ```
@@ -136,11 +143,11 @@ diagrams-haddock foo.hs baz/bar.lhs ~/src/some-cabal-directory
 * Directory targets are assumed to contain Cabal packages, which
   themselves contain a library. `diagrams-haddock` then finds and
   processes the source files corresponding to all modules exported by
-  the library.  Note that `diagrams-haddock` does not currently run on
+  the library.  (Note that `diagrams-haddock` does not currently run on
   unexported modules or on the source code for executables, but if you
   have a use case for either, just file a [feature
   request](https://github.com/diagrams/diagrams-haddock/issues); they
-  shouldn't be too hard to add.
+  shouldn't be too hard to add.)
 
 Also, if you simply invoke `diagrams-haddock` with no targets, it will
 process the Cabal package in the current directory.
@@ -183,27 +190,27 @@ documentation.
 The generated SVG files need to be copied alongside the generated
 Haddock documentation.  There are two good ways to accomplish this:
 
-1. The `cabal` tool has recently acquired an `extra-html-files` field
-   (see https://github.com/haskell/cabal/pull/1182), specifying files
-   which should be copied in alongside generated Haddock
-   documentation.  So you could simply write something like
+1.  The `cabal` tool has recently acquired an `extra-html-files` field
+    (see https://github.com/haskell/cabal/pull/1182), specifying files
+    which should be copied in alongside generated Haddock
+    documentation.  So you could simply write something like
 
-     ```
-     extra-html-files: diagrams/*.svg
-     ```
+    ```
+    extra-html-files: diagrams/*.svg
+    ```
 
-     in your `.cabal` file.  Unfortunately, it will still be a while
-     until this feature makes its way into a new release of `cabal`,
-     and yet longer before you can be sure that most people who may
-     want to build your package's documentation have the new version.
-     So this is currently a good option only if you have the HEAD
-     version of `cabal` and don't care about others being able to
-     build your documentation.  However, in the not-too-distant future
-     this will become the best option.
+    in your `.cabal` file.  Unfortunately, it will still be a while
+    until this feature makes its way into a new release of `cabal`,
+    and yet longer before you can be sure that most people who may
+    want to build your package's documentation have the new version.
+    So this is currently a good option only if you have the HEAD
+    version of `cabal` and don't care about others being able to
+    build your documentation.  However, in the not-too-distant future
+    this will become the best option.
 
-2. In the meantime, it is possible to take advantage of `cabal`'s
-   system of user hooks to manually copy the images right after the
-   Haddock documentation is generated.  Add something like
+2.  In the meantime, it is possible to take advantage of `cabal`'s
+    system of user hooks to manually copy the images right after the
+    Haddock documentation is generated.  Add something like
 
     ```
     build-type: Custom
@@ -211,7 +218,7 @@ Haddock documentation.  There are two good ways to accomplish this:
     ```
 
     to your `.cabal` file, and then put something like the following in your
-   `Setup.hs`:
+    `Setup.hs`:
 
     ``` haskell
     import           Data.List                 (isSuffixOf)
@@ -263,4 +270,5 @@ stuff you might dream up.  Let us know what you do with it!
 
 ## Reporting bugs
 
-Please report any bugs, feature requests, *etc.*, on the [github issue tracker](https://github.com/diagrams/diagrams-haddock/issues).
+Please report any bugs, feature requests, *etc.*, on the [github issue
+tracker](https://github.com/diagrams/diagrams-haddock/issues).
