@@ -19,7 +19,7 @@ bug-reports:         https://github.com/diagrams/diagrams-haddock/issues
 category:            Graphics
 build-type:          Custom
 cabal-version:       >=1.10
-extra-source-files:  README.md, CHANGES.md
+extra-source-files:  README.md, CHANGES.md, diagrams/*.svg
 
 Source-repository head
   type: git
