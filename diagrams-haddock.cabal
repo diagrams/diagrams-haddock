@@ -10,6 +10,11 @@ description:         diagrams-haddock is a tool for compiling embedded inline
                      with your documentation.  For complete
                      documentation and examples, see
                      <https://github.com/diagrams/diagrams-haddock/blob/master/README.md>.
+                     .
+                     For a good example of a package making use of
+                     diagrams-haddock, see the diagrams-contrib
+                     package
+                     (<http://hackage.haskell.org/package/diagrams%2Dcontrib>).
 homepage:            http://projects.haskell.org/diagrams/
 license:             BSD3
 license-file:        LICENSE
