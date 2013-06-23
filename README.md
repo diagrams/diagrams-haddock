@@ -166,6 +166,11 @@ used to customize its behavior:
 * `-o`, `--outputdir`: This is the directory into which the final
   output images will be produced.  The default is `diagrams`.
 
+* `-d`, `--distdir`: When building diagrams for a cabal package, this
+  is the directory in which `diagrams-haddock` should look for the
+  `setup-config` file (*i.e.* the output of `cabal configure`).  The
+  default is `dist`.
+
 * `-i`, `--includedirs`: `diagrams-haddock` does its best to process
   files with CPP directives, even extracting information about where
   to find `#include`s from the `.cabal` file, but sometimes it might
