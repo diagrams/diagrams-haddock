@@ -226,7 +226,7 @@ Haddock documentation.  There are two good ways to accomplish this:
 
     ```
     build-type: Custom
-    extra-source-files: diagrams/*
+    extra-source-files: diagrams/*.svg
     ```
 
     to your `.cabal` file, and then put something like the following in your
