@@ -1,5 +1,5 @@
 name:                diagrams-haddock
-version:             0.1.0.0
+version:             0.1.1.0
 synopsis:            Preprocessor for embedding diagrams in Haddock documentation
 description:         diagrams-haddock is a tool for compiling embedded inline
                      diagrams code in Haddock documentation, for an
@@ -10,6 +10,11 @@ description:         diagrams-haddock is a tool for compiling embedded inline
                      with your documentation.  For complete
                      documentation and examples, see
                      <https://github.com/diagrams/diagrams-haddock/blob/master/README.md>.
+                     .
+                     For a good example of a package making use of
+                     diagrams-haddock, see the diagrams-contrib
+                     package
+                     (<http://hackage.haskell.org/package/diagrams%2Dcontrib>).
 homepage:            http://projects.haskell.org/diagrams/
 license:             BSD3
 license-file:        LICENSE
@@ -19,7 +24,7 @@ bug-reports:         https://github.com/diagrams/diagrams-haddock/issues
 category:            Graphics
 build-type:          Custom
 cabal-version:       >=1.10
-extra-source-files:  README.md, CHANGES.md
+extra-source-files:  README.md, CHANGES.md, diagrams/*.svg
 
 Source-repository head
   type: git
@@ -42,7 +47,7 @@ library
                        diagrams-lib >= 0.6 && < 0.8,
                        diagrams-svg >= 0.6 && < 0.8,
                        vector-space >= 0.8 && < 0.9,
-                       lens >= 3.8 && < 3.9,
+                       lens >= 3.8 && < 3.10,
                        cpphs >= 1.15,
                        cautious-file >= 1.0 && < 1.1,
                        uniplate >= 1.6 && < 1.7,
@@ -68,12 +73,12 @@ Test-suite diagrams-haddock-tests
   main-is:             Tests.hs
   build-depends:       base,
                        containers >= 0.4 && < 0.6,
-                       QuickCheck >= 2.4 && < 2.6,
+                       QuickCheck >= 2.4 && < 2.7,
                        test-framework >= 0.8 && < 0.9,
                        test-framework-quickcheck2 >= 0.3 && < 0.4,
                        parsec >= 3,
                        haskell-src-exts >= 1.13 && < 1.14,
-                       lens >= 3.8 && < 3.9,
+                       lens >= 3.8 && < 3.10,
                        diagrams-haddock
   hs-source-dirs:      test
   default-language:    Haskell2010

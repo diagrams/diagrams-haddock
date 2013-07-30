@@ -24,6 +24,7 @@ data DiagramsHaddock
   { quiet       :: Bool
   , cacheDir    :: FilePath
   , outputDir   :: FilePath
+  , distDir     :: FilePath
   , includeDirs :: [FilePath]
   , cppDefines  :: [String]
   , targets     :: [FilePath]
@@ -45,6 +46,11 @@ diagramsHaddockOpts
     = "diagrams"
       &= typDir
       &= help "Directory to output compiled diagrams (default: diagrams)"
+
+  , distDir
+    = "dist"
+      &= typDir
+      &= help "Directory in which to look for setup-config (default: dist)"
 
   , includeDirs
     = []
@@ -96,10 +102,10 @@ targetError targ = putStrLn $ "Warning: target " ++ targ ++ " does not exist, ig
 --   or any unexported modules.
 processCabalPackage :: DiagramsHaddock -> FilePath -> IO ()
 processCabalPackage opts dir = do
-  mlbi <- maybeGetPersistBuildConfig distDir
+  mlbi <- maybeGetPersistBuildConfig fullDistDir
   case mlbi of
     Nothing -> putStrLn $
-      "No setup-config found in " ++ distDir ++ ", please run 'cabal configure' first."
+      "No setup-config found in " ++ fullDistDir ++ ", please run 'cabal configure' first."
     Just lbi -> do
       let mlib = P.library . localPkgDescr $ lbi
       case mlib of
@@ -115,7 +121,7 @@ processCabalPackage opts dir = do
               cabalDefines = parseCabalDefines defines
           mapM_ (tryProcessFile opts' cabalDefines dir srcDirs) . map toFilePath . P.exposedModules $ lib
 
-  where distDir = dir </> "dist"
+  where fullDistDir = dir </> distDir opts
 
 -- | Use @cpphs@'s options parser to handle the options from cabal.
 parseCabalDefines :: [String] -> [(String,String)]

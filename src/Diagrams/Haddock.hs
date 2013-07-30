@@ -18,6 +18,11 @@
 -- > greenCircle = circle 1
 -- >             # fc green # pad 1.1
 --
+-- For a much better example of the use of diagrams-haddock, see the
+-- diagrams-contrib package: <http://hackage.haskell.org/package/diagrams%2Dcontrib>.
+--
+-- For complete documentation and examples, see
+-- <https://github.com/diagrams/diagrams-haddock/blob/master/README.md>.
 -----------------------------------------------------------------------------
 module Diagrams.Haddock
     ( -- * Diagram URLs
