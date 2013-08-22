@@ -1,3 +1,9 @@
+0.1.1.2 (22 August 2013)
+------------------------
+
+    - update for haskell-src-exts 1.14
+    - 'extra-html-files' is now called 'extra-doc-files'
+
 0.1.1.1 (1 August 2013)
 -----------------------
 
