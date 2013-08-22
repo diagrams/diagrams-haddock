@@ -202,13 +202,14 @@ documentation.
 The generated SVG files need to be copied alongside the generated
 Haddock documentation.  There are two good ways to accomplish this:
 
-1.  The `cabal` tool has recently acquired an `extra-html-files` field
-    (see https://github.com/haskell/cabal/pull/1182), specifying files
+1.  The `cabal` tool has recently acquired an `extra-doc-files` field
+    (see https://github.com/haskell/cabal/pull/1182 and
+    https://github.com/haskell/cabal/pull/1427), specifying files
     which should be copied in alongside generated Haddock
     documentation.  So you could simply write something like
 
     ```
-    extra-html-files: diagrams/*.svg
+    extra-doc-files: diagrams/*.svg
     ```
 
     in your `.cabal` file.  Unfortunately, it will still be a while
