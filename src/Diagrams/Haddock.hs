@@ -294,8 +294,9 @@ makeCodeBlock file (s,l) =
       (indent 2 . lines $ showParseFailure loc err)
   where
     parseMode = defaultParseMode
-                { fixities = Nothing
-                , extensions = MultiParamTypeClasses : haskell2010
+                { fixities     = Nothing
+                , baseLanguage = Haskell2010
+                , extensions   = [EnableExtension MultiParamTypeClasses]
                 }
     indent n  = map (replicate n ' ' ++)
     showBlock b
@@ -365,7 +366,8 @@ parseCodeBlocks file src =
     parseMode = defaultParseMode
                 { fixities      = Nothing
                 , parseFilename = file
-                , extensions    = MultiParamTypeClasses : haskell2010
+                , baseLanguage  = Haskell2010
+                , extensions    = [EnableExtension MultiParamTypeClasses]
                 }
 
 -- | Given an identifier and a list of CodeBlocks, filter the list of
