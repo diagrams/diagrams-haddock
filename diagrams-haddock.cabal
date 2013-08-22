@@ -77,7 +77,7 @@ Test-suite diagrams-haddock-tests
                        test-framework >= 0.8 && < 0.9,
                        test-framework-quickcheck2 >= 0.3 && < 0.4,
                        parsec >= 3,
-                       haskell-src-exts >= 1.13 && < 1.14,
+                       haskell-src-exts >= 1.14 && < 1.15,
                        lens >= 3.8 && < 3.10,
                        diagrams-haddock
   hs-source-dirs:      test
