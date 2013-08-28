@@ -367,9 +367,7 @@ parseCodeBlocks file src =
                 { fixities      = Nothing
                 , parseFilename = file
                 , baseLanguage  = Haskell2010
-                , extensions    = [ EnableExtension MultiParamTypeClasses
-                                  , EnableExtension TypeFamilies
-                                  ]
+                , extensions    = [EnableExtension MultiParamTypeClasses]
                 }
 
 -- | Given an identifier and a list of CodeBlocks, filter the list of
