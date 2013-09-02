@@ -164,10 +164,11 @@ displayDiagramURL d = "<<" ++ d ^. diagramURL ++ "#" ++ opts ++ ">>"
     displayOpt (k,v) = k ++ "=" ++ v
 
 -- | Parse things of the form @\<\<URL#diagram=name&key=val&...\>\>@.
+--   The URL is optional (the @#@, however, is required).
 parseDiagramURL :: Parser DiagramURL
 parseDiagramURL =
   DiagramURL
-  <$> (string "<<" *> many1 (noneOf "#>"))
+  <$> (string "<<" *> many (noneOf "#>"))
   <*> (char '#' *> string "diagram=" *> many1 (noneOf "&>"))
   <*> ((M.fromList <$> many parseKeyValPair) <* string ">>")
 
