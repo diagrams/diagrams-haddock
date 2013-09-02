@@ -96,7 +96,7 @@ For example:
 --
 -- as illustrated below:
 --
--- <<dummy#diagram=algoIllustration&width=400>>
+-- <<#diagram=algoIllustration&width=400>>
 --
 -- > algoIllustration = ...
 ```
@@ -113,13 +113,13 @@ separate code blocks and even shared between diagrams.  For example:
 --
 -- Here is a blue circle:
 --
--- <<dummy#diagram=blueC&width=200>>
+-- <<#diagram=blueC&width=200>>
 --
 -- > blueC = circle 1 # makeitblue
 --
 -- And here is a blue square:
 --
--- <<dummy#diagram=blueS&width=200>>
+-- <<#diagram=blueS&width=200>>
 --
 -- > blueS = square 1 # makeitblue
 ```
