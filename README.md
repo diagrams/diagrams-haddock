@@ -181,23 +181,54 @@ used to customize its behavior:
 * `--cppdefines`: likewise, this option allows you to specify
   additional names that should be `#define`d when CPP is run.
 
+* `--dataURIs`: embed the generated SVG images directly in the source
+  code with [data URIs](http://en.wikipedia.org/wiki/Data_URI_scheme‎)
+  (the default is to generate external SVG files and link to them).
+  See the section below for a discussion of the tradeoffs involved.
+
 * `-q`, `--quiet`: `diagrams-haddock` normally prints some logging
   information to indicate what it is doing; this option silences the
   output.
 
 ## Workflow and Cabal setup
 
-The recommended workflow for using `diagrams-haddock` is as follows:
+There are two ways one may include generated SVG images with your
+documentation: as data URIs, or as external images.  The two options
+are discussed below, along with pros and cons of each.  Note that in
+either case, consumers of your library (including Hackage itself) do
+*not* need to have `diagrams-haddock` installed in order to build your
+documentation.
+
+### Using data URIs
+
+If you pass the `--dataURIs` option to `diagrams-haddock`, any
+generated images will be embedded directly in your source file (and
+hence also in the HTML ultimately produced by `haddock`) as
+[data URIs](http://en.wikipedia.org/wiki/Data_URI_scheme‎).  To use
+this method,
+
+1. Include inline diagrams code and URLs in your source code.
+2. Run `diagrams-haddock --dataURIs`.
+3. Commit the resulting URL changes to your source files.
+
+The benefit of this scheme is that there are no extra files to deal
+with, and no need to alter your `.cabal` file in any way.  The
+downside is that it significantly bloats your source code, and may
+make it extremely inconvenient to edit without some sort of tool
+support (*e.g.* an editor that can "collapse" certain sections of the
+source file).
+
+### Using external images
+
+By default, `diagrams-haddock` generates external SVG image files.  This
+makes for a much less invasive changes to your source files, but
+requires some extra work to manage the extra files.  To use this method,
 
 1. Include inline diagrams code and URLs in your source code.
 2. Run `diagrams-haddock`.
-3. Commit the resulting URL changes and produced SVG files.
+3. Commit the resulting URL changes to your source files *and* the produced SVG files.
 4. Arrange to have the SVG files installed along with your package's
    Haddock documentation (more on this below).
-
-The point is that consumers of your library (such as Hackage) do not
-need to have `diagrams-haddock` installed in order to build your
-documentation.
 
 The generated SVG files need to be copied alongside the generated
 Haddock documentation.  There are two good ways to accomplish this:
