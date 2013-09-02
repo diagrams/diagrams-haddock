@@ -22,6 +22,7 @@ import           Paths_diagrams_haddock             (version)
 data DiagramsHaddock
   = DiagramsHaddock
   { quiet       :: Bool
+  , dataURIs    :: Bool
   , cacheDir    :: FilePath
   , outputDir   :: FilePath
   , distDir     :: FilePath
@@ -36,6 +37,10 @@ diagramsHaddockOpts
   = DiagramsHaddock
   { quiet = False
     &= help "Suppress normal logging output"
+
+  , dataURIs = False
+    &= help "Generate embedded data URIs instead of external SVGs"
+    &= name "dataURIs"
 
   , cacheDir
     = ".diagrams-cache"
@@ -149,7 +154,7 @@ tryProcessFile opts defines dir srcDirs fileBase = do
 -- | Process a single file with diagrams-haddock.
 processFile :: DiagramsHaddock -> [(String,String)] -> FilePath -> IO ()
 processFile opts defines file = do
-    errs <- processHaddockDiagrams' cpphsOpts (quiet opts) (cacheDir opts) (outputDir opts) file
+    errs <- processHaddockDiagrams' cpphsOpts (quiet opts) (dataURIs opts) (cacheDir opts) (outputDir opts) file
     case errs of
       [] -> return ()
       _  -> putStrLn $ intercalate "\n" errs

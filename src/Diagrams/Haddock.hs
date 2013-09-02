@@ -75,7 +75,9 @@ import           Control.Applicative             hiding (many, (<|>))
 import           Control.Arrow                   (first, (&&&), (***))
 import           Control.Lens                    hiding ((<.>))
 import           Control.Monad.Writer
+import qualified Data.ByteString.Base64.Lazy     as BS64
 import qualified Data.ByteString.Lazy            as BS
+import qualified Data.ByteString.Lazy.Char8      as BS8
 import           Data.Char                       (isSpace)
 import           Data.Either                     (lefts, rights)
 import           Data.Function                   (on)
@@ -412,19 +414,20 @@ transitiveClosure ident blocks = tc [ident] blocks
 --   If for some reason you would like this scheme to be more
 --   flexible/configurable, feel free to file a feature request.
 compileDiagram :: Bool       -- ^ @True@ = quiet
+               -> Bool       -- ^ @True@ = generate data URIs
                -> FilePath   -- ^ cache directory
                -> FilePath   -- ^ output directory
                -> FilePath   -- ^ file being processed
                -> S.Set String -- ^ diagrams referenced from URLs
                -> [CodeBlock] -> DiagramURL -> IO (DiagramURL, Bool)
-compileDiagram quiet cacheDir outputDir file ds code url
+compileDiagram quiet dataURIs cacheDir outputDir file ds code url
     -- See https://github.com/diagrams/diagrams-haddock/issues/7 .
   | (url ^. diagramName) `S.notMember` ds = return (url, False)
 
     -- The normal case.
   | otherwise = do
-      createDirectoryIfMissing True outputDir
       createDirectoryIfMissing True cacheDir
+      when (not dataURIs) $ createDirectoryIfMissing True outputDir
 
       let outFile = outputDir </> (munge file ++ "_" ++ (url ^. diagramName)) <.> "svg"
 
@@ -434,7 +437,7 @@ compileDiagram quiet cacheDir outputDir file ds code url
           h = read <$> M.lookup "height" (url ^. diagramOpts)
 
           oldURL = (url, False)
-          newURL = (url & diagramURL .~ outFile, outFile /= url^.diagramURL)
+          newURL content = (url & diagramURL .~ content, content /= url^.diagramURL)
 
           neededCode = transitiveClosure (url ^. diagramName) code
 
@@ -462,32 +465,42 @@ compileDiagram quiet cacheDir outputDir file ds code url
           putStrLn (ppInterpError ierr)
           return oldURL
         Skipped hash    -> do
-          copyFile (mkCached hash) outFile
+          let cached = mkCached hash
+          when (not dataURIs) $ copyFile cached outFile
           logStrLn ""
-          return newURL
+          if dataURIs
+            then do
+              svgBS <- BS.readFile cached
+              return (newURL (mkDataURI svgBS))
+            else return (newURL outFile)
         OK hash svg     -> do
           let cached = mkCached hash
-          BS.writeFile cached (renderSvg svg)
-          copyFile cached outFile
+              svgBS  = renderSvg svg
+          BS.writeFile cached svgBS
+          url' <- if dataURIs
+                    then return (newURL (mkDataURI svgBS))
+                    else (copyFile cached outFile >> return (newURL outFile))
           logStrLn "compiled."
-          return newURL
+          return url'
 
  where
    mkCached base = cacheDir </> base <.> "svg"
    logStr   = when (not quiet) . putStr
    logStrLn = when (not quiet) . putStrLn
+   mkDataURI svg = "data:image/svg+xml;base64," ++ BS8.unpack (BS64.encode svg)
 
 -- | Compile all the diagrams referenced in an entire module.
 compileDiagrams :: Bool          -- ^ @True@ = quiet
+                -> Bool          -- ^ @True@ = generate data URIs
                 -> FilePath      -- ^ cache directory
                 -> FilePath      -- ^ output directory
                 -> FilePath      -- ^ file being processed
                 -> S.Set String  -- ^ diagram names referenced from URLs
                 -> [CodeBlock]
                 -> [Either String DiagramURL] -> IO ([Either String DiagramURL], Bool)
-compileDiagrams quiet cacheDir outputDir file ds cs urls = do
+compileDiagrams quiet dataURIs cacheDir outputDir file ds cs urls = do
   urls' <- urls & (traverse . _Right)
-                %%~ compileDiagram quiet cacheDir outputDir file ds cs
+                %%~ compileDiagram quiet dataURIs cacheDir outputDir file ds cs
   let changed = orOf (traverse . _Right . _2) urls'
   return (urls' & (traverse . _Right) %~ fst, changed)
 
@@ -501,6 +514,7 @@ compileDiagrams quiet cacheDir outputDir file ds cs urls = do
 --   Returns a list of warnings and/or errors.
 processHaddockDiagrams
   :: Bool       -- ^ quiet
+  -> Bool       -- ^ generate data URIs?
   -> FilePath   -- ^ cache directory
   -> FilePath   -- ^ output directory
   -> FilePath   -- ^ file to be processed
@@ -514,11 +528,12 @@ processHaddockDiagrams = processHaddockDiagrams' opts
 processHaddockDiagrams'
   :: CpphsOptions -- ^ Options for cpphs
   -> Bool         -- ^ quiet
+  -> Bool         -- ^ generate data URIs?
   -> FilePath     -- ^ cache directory
   -> FilePath     -- ^ output directory
   -> FilePath     -- ^ file to be processed
   -> IO [String]
-processHaddockDiagrams' opts quiet cacheDir outputDir file = do
+processHaddockDiagrams' opts quiet dataURIs cacheDir outputDir file = do
   e   <- doesFileExist file
   case e of
     False -> return ["Error: " ++ file ++ " not found."]
@@ -537,6 +552,7 @@ processHaddockDiagrams' opts quiet cacheDir outputDir file = do
             Right urls -> do
               (urls', changed) <- compileDiagrams
                                     quiet
+                                    dataURIs
                                     cacheDir
                                     outputDir
                                     file
