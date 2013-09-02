@@ -96,7 +96,9 @@ import           Language.Preprocessor.Cpphs
 import           System.Directory                (copyFile,
                                                   createDirectoryIfMissing,
                                                   doesFileExist)
-import           System.FilePath                 ((<.>), (</>))
+import           System.FilePath                 (dropExtension, normalise,
+                                                  splitDirectories, (<.>),
+                                                  (</>))
 import qualified System.IO                       as IO
 import qualified System.IO.Cautious              as Cautiously
 import qualified System.IO.Strict                as Strict
@@ -412,9 +414,10 @@ transitiveClosure ident blocks = tc [ident] blocks
 compileDiagram :: Bool       -- ^ @True@ = quiet
                -> FilePath   -- ^ cache directory
                -> FilePath   -- ^ output directory
+               -> FilePath   -- ^ file being processed
                -> S.Set String -- ^ diagrams referenced from URLs
                -> [CodeBlock] -> DiagramURL -> IO (DiagramURL, Bool)
-compileDiagram quiet cacheDir outputDir ds code url
+compileDiagram quiet cacheDir outputDir file ds code url
     -- See https://github.com/diagrams/diagrams-haddock/issues/7 .
   | (url ^. diagramName) `S.notMember` ds = return (url, False)
 
@@ -423,7 +426,9 @@ compileDiagram quiet cacheDir outputDir ds code url
       createDirectoryIfMissing True outputDir
       createDirectoryIfMissing True cacheDir
 
-      let outFile = outputDir </> (url ^. diagramName) <.> "svg"
+      let outFile = outputDir </> (munge file ++ "_" ++ (url ^. diagramName)) <.> "svg"
+
+          munge   = intercalate "_" . splitDirectories . normalise . dropExtension
 
           w = read <$> M.lookup "width" (url ^. diagramOpts)
           h = read <$> M.lookup "height" (url ^. diagramOpts)
@@ -476,12 +481,13 @@ compileDiagram quiet cacheDir outputDir ds code url
 compileDiagrams :: Bool          -- ^ @True@ = quiet
                 -> FilePath      -- ^ cache directory
                 -> FilePath      -- ^ output directory
+                -> FilePath      -- ^ file being processed
                 -> S.Set String  -- ^ diagram names referenced from URLs
                 -> [CodeBlock]
                 -> [Either String DiagramURL] -> IO ([Either String DiagramURL], Bool)
-compileDiagrams quiet cacheDir outputDir ds cs urls = do
+compileDiagrams quiet cacheDir outputDir file ds cs urls = do
   urls' <- urls & (traverse . _Right)
-                %%~ compileDiagram quiet cacheDir outputDir ds cs
+                %%~ compileDiagram quiet cacheDir outputDir file ds cs
   let changed = orOf (traverse . _Right . _2) urls'
   return (urls' & (traverse . _Right) %~ fst, changed)
 
@@ -529,7 +535,14 @@ processHaddockDiagrams' opts quiet cacheDir outputDir file = do
             Left _     ->
               error "This case can never happen; see prop_parseDiagramURLs_succeeds"
             Right urls -> do
-              (urls', changed) <- compileDiagrams quiet cacheDir outputDir ds cs urls
+              (urls', changed) <- compileDiagrams
+                                    quiet
+                                    cacheDir
+                                    outputDir
+                                    file
+                                    ds
+                                    cs
+                                    urls
               let src' = displayDiagramURLs urls'
 
               -- See https://github.com/diagrams/diagrams-haddock/issues/8:
