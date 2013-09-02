@@ -47,6 +47,7 @@ diagramsHaddockOpts
     = ".diagrams-cache"
       &= typDir
       &= help "Directory for storing cached diagrams (default: .diagrams-cache)"
+      &= name "c"
 
   , outputDir
     = "diagrams"
@@ -57,6 +58,7 @@ diagramsHaddockOpts
     = def
       &= typDir
       &= help "Directory in which to look for setup-config (default: dist)"
+      &= name "d"
 
   , includeDirs
     = []
