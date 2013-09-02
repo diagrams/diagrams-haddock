@@ -37,15 +37,15 @@ right?)
 
 ## Adding diagrams to source files
 
-Haddock supports inline links to images with the syntax
-`<<URL>>`.  To indicate an image which should be automatically
-generated from some diagrams code, use the special syntax
+Haddock supports inline links to images with the syntax `<<URL>>`.  To
+indicate an image which should be automatically generated from some
+diagrams code, use the special syntax
 `<<URL#diagram=name&key1=val1&key2=val2&...>>`.  The URL will be
 automatically filled in by `diagrams-haddock`, so when you first
-create an inline image placeholder you can put any arbitrary text in
-its place.  For example, you might write
+create an inline image placeholder you can simply omit it (or put any
+arbitrary text in its place).  For example, you might write
 
-    <<dummy#diagram=mySquare&width=200&height=300>>
+    <<#diagram=mySquare&width=200&height=300>>
 
 indicating an image which should be generated using the definition of
 `mySquare`, with a maximum width of 200 and maximum height of 300.
