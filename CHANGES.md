@@ -1,3 +1,8 @@
+0.1.2.0 (1 September 2013)
+--------------------------
+
+    - part before # is now optional when writing a new diagram URL
+
 0.1.1.2 (22 August 2013)
 ------------------------
 
