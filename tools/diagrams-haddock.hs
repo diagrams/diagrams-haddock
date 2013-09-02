@@ -8,6 +8,7 @@ import           Data.Version                       (showVersion)
 import           Diagrams.Haddock
 import           System.Console.CmdArgs
 import           System.Directory
+import           System.Environment                 (getEnvironment)
 import           System.FilePath                    ((<.>), (</>))
 
 import           Distribution.ModuleName            (toFilePath)
@@ -25,7 +26,7 @@ data DiagramsHaddock
   , dataURIs    :: Bool
   , cacheDir    :: FilePath
   , outputDir   :: FilePath
-  , distDir     :: FilePath
+  , distDir     :: Maybe FilePath
   , includeDirs :: [FilePath]
   , cppDefines  :: [String]
   , targets     :: [FilePath]
@@ -53,7 +54,7 @@ diagramsHaddockOpts
       &= help "Directory to output compiled diagrams (default: diagrams)"
 
   , distDir
-    = "dist"
+    = def
       &= typDir
       &= help "Directory in which to look for setup-config (default: dist)"
 
@@ -107,6 +108,17 @@ targetError targ = putStrLn $ "Warning: target " ++ targ ++ " does not exist, ig
 --   or any unexported modules.
 processCabalPackage :: DiagramsHaddock -> FilePath -> IO ()
 processCabalPackage opts dir = do
+  mhsenv <- getHsenv
+  let fullDistDir = dir </> case (distDir opts, mhsenv) of
+                              -- command-line arg trumps all
+                              (Just d, _)           -> d
+
+                              -- next, look for active hsenv
+                              (Nothing, Just hsenv) -> "dist_" ++ hsenv
+
+                              -- otherwise, default to "dist"
+                              _                     -> "dist"
+
   mlbi <- maybeGetPersistBuildConfig fullDistDir
   case mlbi of
     Nothing -> putStrLn $
@@ -126,7 +138,10 @@ processCabalPackage opts dir = do
               cabalDefines = parseCabalDefines defines
           mapM_ (tryProcessFile opts' cabalDefines dir srcDirs) . map toFilePath . P.exposedModules $ lib
 
-  where fullDistDir = dir </> distDir opts
+getHsenv :: IO (Maybe String)
+getHsenv = do
+  env <- getEnvironment
+  return $ lookup "HSENV_NAME" env
 
 -- | Use @cpphs@'s options parser to handle the options from cabal.
 parseCabalDefines :: [String] -> [(String,String)]
