@@ -168,8 +168,12 @@ used to customize its behavior:
 
 * `-d`, `--distdir`: When building diagrams for a cabal package, this
   is the directory in which `diagrams-haddock` should look for the
-  `setup-config` file (*i.e.* the output of `cabal configure`).  The
-  default is `dist`.
+  `setup-config` file (*i.e.* the output of `cabal configure`).  An
+  explicit value for this flag takes precedence; next,
+  `diagrams-haddock` checks whether there is an active
+  [hsenv](http://hackage.haskell.org/package/hsenv) environment, and
+  if so uses `dist_<hsenv name>`; otherwise, it defaults to using
+  `dist`.
 
 * `-i`, `--includedirs`: `diagrams-haddock` does its best to process
   files with CPP directives, even extracting information about where
