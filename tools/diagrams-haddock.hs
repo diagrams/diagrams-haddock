@@ -2,7 +2,10 @@
 {-# LANGUAGE TupleSections      #-}
 module Main where
 
-import           Control.Monad                      (forM_, when)
+import           Control.Monad                      (forM_, when, replicateM, join)
+import           Control.Concurrent.Async
+import           Control.Concurrent.STM
+import           Control.Concurrent.STM.TChan
 import           Data.List                          (intercalate)
 import           Data.Version                       (showVersion)
 import           Diagrams.Haddock
@@ -143,7 +146,22 @@ processCabalPackage opts dir = do
                     { includeDirs = includeDirs opts ++ includes
                     }
               cabalDefines = parseCabalDefines defines
-          mapM_ (tryProcessFile opts' cabalDefines dir srcDirs) . map toFilePath . P.exposedModules $ lib
+          let files  = map toFilePath . P.exposedModules $ lib
+              single = tryProcessFile opts' cabalDefines dir srcDirs
+          case jobs opts of
+            Just n  -> runJobs n single files
+            Nothing -> mapM_ single files
+
+runJobs :: Int -> (a -> IO ()) -> [a] -> IO ()
+runJobs n f as
+    | n < 2     = mapM_ f as
+    | otherwise = do
+        c <- newTChanIO
+        atomically (mapM_ (writeTChan c . f) as)
+        ws <- replicateM n $ async (worker c)
+        mapM_ wait ws
+  where
+     worker c = join $ atomically ((readTChan c >>= return . (>> worker c)) `orElse` return (return ()))
 
 getHsenv :: IO (Maybe String)
 getHsenv = do
