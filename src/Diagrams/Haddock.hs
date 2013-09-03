@@ -75,6 +75,7 @@ import           Control.Applicative             hiding (many, (<|>))
 import           Control.Arrow                   (first, (&&&), (***))
 import           Control.Lens                    hiding ((<.>))
 import           Control.Monad.Writer
+import           Control.Concurrent.MVar
 import qualified Data.ByteString.Base64.Lazy     as BS64
 import qualified Data.ByteString.Lazy            as BS
 import qualified Data.ByteString.Lazy.Char8      as BS8
@@ -104,6 +105,7 @@ import           System.FilePath                 (dropExtension, normalise,
 import qualified System.IO                       as IO
 import qualified System.IO.Cautious              as Cautiously
 import qualified System.IO.Strict                as Strict
+import           System.IO.Unsafe
 import           Text.Blaze.Svg.Renderer.Utf8    (renderSvg)
 import           Text.Parsec
 import qualified Text.Parsec                     as P
@@ -393,6 +395,10 @@ transitiveClosure ident blocks = tc [ident] blocks
 -- Diagrams
 ------------------------------------------------------------
 
+{-# NOINLINE ghcLock #-}
+ghcLock :: MVar ()
+ghcLock = unsafePerformIO $ newMVar ()
+
 -- $diagrams
 -- This section contains all the functions which actually interface
 -- with diagrams-builder in order to compile diagrams referenced from
@@ -444,6 +450,8 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
       logStr $ (url ^. diagramName) ++ "..."
       IO.hFlush IO.stdout
 
+      () <- takeMVar ghcLock
+
       res <- buildDiagram
                SVG
                zeroV
@@ -453,6 +461,8 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
                []
                [ "Diagrams.Backend.SVG" ]
                (hashedRegenerate (\_ opts -> opts) cacheDir)
+
+      putMVar ghcLock ()
 
       case res of
         -- XXX incorporate these into error reporting framework instead of printing
