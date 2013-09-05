@@ -447,7 +447,7 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
       res <- buildDiagram
                SVG
                zeroV
-               (SVGOptions (mkSizeSpec w h))
+               (SVGOptions (mkSizeSpec w h) Nothing)
                (map (view codeBlockCode) neededCode)
                (url ^. diagramName)
                []
