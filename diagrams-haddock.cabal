@@ -64,7 +64,7 @@ Executable diagrams-haddock
                        filepath,
                        diagrams-haddock,
                        cmdargs >= 0.8 && < 0.11,
-                       Cabal >= 1.14 && < 1.18,
+                       Cabal >= 1.14 && < 1.19,
                        cpphs >= 1.15
   hs-source-dirs:      tools
   default-language:    Haskell2010
