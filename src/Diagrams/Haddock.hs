@@ -95,6 +95,8 @@ import           Data.VectorSpace                (zeroV)
 import           Language.Haskell.Exts.Annotated hiding (loc)
 import qualified Language.Haskell.Exts.Annotated as HSE
 import           Language.Preprocessor.Cpphs
+import           System.Console.ANSI             (cursorDownLine,
+                                                  setCursorColumn)
 import           System.Directory                (copyFile,
                                                   createDirectoryIfMissing,
                                                   doesFileExist)
@@ -290,7 +292,7 @@ makeCodeBlock file (s,l) =
                                              (collectIdents m)
                                              (collectBindings m)
     ParseFailed loc err -> failWith . unlines $
-      [ file ++ ": " ++ show l ++ ": Warning: could not parse code block:" ]
+      [ file ++ ": " ++ show l ++ ":\nWarning: could not parse code block:" ]
       ++
       showBlock s
       ++
@@ -419,17 +421,17 @@ compileDiagram :: Bool       -- ^ @True@ = quiet
                -> FilePath   -- ^ output directory
                -> FilePath   -- ^ file being processed
                -> S.Set String -- ^ diagrams referenced from URLs
-               -> [CodeBlock] -> DiagramURL -> IO (DiagramURL, Bool)
+               -> [CodeBlock]
+               -> DiagramURL
+               -> WriterT [String] IO (DiagramURL, Bool)
 compileDiagram quiet dataURIs cacheDir outputDir file ds code url
     -- See https://github.com/diagrams/diagrams-haddock/issues/7 .
   | (url ^. diagramName) `S.notMember` ds = return (url, False)
 
     -- The normal case.
   | otherwise = do
-      createDirectoryIfMissing True cacheDir
-      when (not dataURIs) $ createDirectoryIfMissing True outputDir
-
-      let outFile = outputDir </> (munge file ++ "_" ++ (url ^. diagramName)) <.> "svg"
+      let outFile = outputDir </>
+                    (munge file ++ "_" ++ (url ^. diagramName)) <.> "svg"
 
           munge   = intercalate "_" . splitDirectories . normalise . dropExtension
 
@@ -441,53 +443,63 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
 
           neededCode = transitiveClosure (url ^. diagramName) code
 
-      logStr $ (url ^. diagramName) ++ "..."
-      IO.hFlush IO.stdout
+          errHeader = file ++ ": " ++ (url ^. diagramName) ++ ":\n"
 
-      res <- buildDiagram
-               SVG
-               zeroV
-               (SVGOptions (mkSizeSpec w h) Nothing)
-               (map (view codeBlockCode) neededCode)
-               (url ^. diagramName)
-               []
-               [ "Diagrams.Backend.SVG" ]
-               (hashedRegenerate (\_ opts -> opts) cacheDir)
+      res <- liftIO $ do
+        createDirectoryIfMissing True cacheDir
+        when (not dataURIs) $ createDirectoryIfMissing True outputDir
+
+        logStr $ "[ ] " ++ (url ^. diagramName)
+        IO.hFlush IO.stdout
+
+        buildDiagram
+          SVG
+          zeroV
+          (SVGOptions (mkSizeSpec w h) Nothing)
+          (map (view codeBlockCode) neededCode)
+          (url ^. diagramName)
+          []
+          [ "Diagrams.Backend.SVG" ]
+          (hashedRegenerate (\_ opts -> opts) cacheDir)
 
       case res of
         -- XXX incorporate these into error reporting framework instead of printing
         ParseErr err    -> do
-          putStrLn ("Parse error:")
-          putStrLn err
+          tell [errHeader ++ "Parse error: " ++ err]
+          logResult "!"
           return oldURL
         InterpErr ierr  -> do
-          putStrLn ("Interpreter error:")
-          putStrLn (ppInterpError ierr)
+          tell [errHeader ++ "Interpreter error: " ++ ppInterpError ierr]
+          logResult "!"
           return oldURL
         Skipped hash    -> do
           let cached = mkCached hash
-          when (not dataURIs) $ copyFile cached outFile
-          logStrLn ""
+          when (not dataURIs) $ liftIO $ copyFile cached outFile
+          logResult "."
           if dataURIs
             then do
-              svgBS <- BS.readFile cached
+              svgBS <- liftIO $ BS.readFile cached
               return (newURL (mkDataURI svgBS))
             else return (newURL outFile)
         OK hash svg     -> do
           let cached = mkCached hash
               svgBS  = renderSvg svg
-          BS.writeFile cached svgBS
+          liftIO $ BS.writeFile cached svgBS
           url' <- if dataURIs
                     then return (newURL (mkDataURI svgBS))
-                    else (copyFile cached outFile >> return (newURL outFile))
-          logStrLn "compiled."
+                    else liftIO (copyFile cached outFile >> return (newURL outFile))
+          logResult "X"
           return url'
 
  where
    mkCached base = cacheDir </> base <.> "svg"
-   logStr   = when (not quiet) . putStr
-   logStrLn = when (not quiet) . putStrLn
    mkDataURI svg = "data:image/svg+xml;base64," ++ BS8.unpack (BS64.encode svg)
+
+   logStr, logResult :: MonadIO m => String -> m ()
+   logStr      = liftIO . when (not quiet) . putStr
+   logResult s = liftIO . when (not quiet) $ do
+     setCursorColumn 1
+     putStrLn s
 
 -- | Compile all the diagrams referenced in an entire module.
 compileDiagrams :: Bool          -- ^ @True@ = quiet
@@ -497,7 +509,8 @@ compileDiagrams :: Bool          -- ^ @True@ = quiet
                 -> FilePath      -- ^ file being processed
                 -> S.Set String  -- ^ diagram names referenced from URLs
                 -> [CodeBlock]
-                -> [Either String DiagramURL] -> IO ([Either String DiagramURL], Bool)
+                -> [Either String DiagramURL]
+                -> WriterT [String] IO ([Either String DiagramURL], Bool)
 compileDiagrams quiet dataURIs cacheDir outputDir file ds cs urls = do
   urls' <- urls & (traverse . _Right)
                 %%~ compileDiagram quiet dataURIs cacheDir outputDir file ds cs
@@ -550,15 +563,8 @@ processHaddockDiagrams' opts quiet dataURIs cacheDir outputDir file = do
             Left _     ->
               error "This case can never happen; see prop_parseDiagramURLs_succeeds"
             Right urls -> do
-              (urls', changed) <- compileDiagrams
-                                    quiet
-                                    dataURIs
-                                    cacheDir
-                                    outputDir
-                                    file
-                                    ds
-                                    cs
-                                    urls
+              ((urls', changed), msgs2) <- runWriterT $
+                compileDiagrams quiet dataURIs cacheDir outputDir file ds cs urls
               let src' = displayDiagramURLs urls'
 
               -- See https://github.com/diagrams/diagrams-haddock/issues/8:
@@ -566,7 +572,7 @@ processHaddockDiagrams' opts quiet dataURIs cacheDir outputDir file = do
               -- we do the encoding to UTF-8 ourselves and then call
               -- writeFileL.
               when changed $ Cautiously.writeFileL file (T.encodeUtf8 . T.pack $ src')
-              return msgs
+              return (msgs ++ msgs2)
   where
     go src =
       case runCE (parseCodeBlocks file src) of
