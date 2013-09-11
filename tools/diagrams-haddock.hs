@@ -29,7 +29,6 @@ data DiagramsHaddock
   , distDir     :: Maybe FilePath
   , includeDirs :: [FilePath]
   , cppDefines  :: [String]
-  , jobs        :: Maybe Int
   , targets     :: [FilePath]
   }
   deriving (Show, Typeable, Data)
@@ -70,10 +69,6 @@ diagramsHaddockOpts
     = []
       &= typ "NAME"
       &= help "Preprocessor defines for CPP pass"
-
-  , jobs = def
-      &= typ "INT"
-      &= help "Number of threads to use"
 
   , targets
     = def &= args &= typFile
