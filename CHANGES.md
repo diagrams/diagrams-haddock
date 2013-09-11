@@ -1,3 +1,10 @@
+0.2.1 (11 September 2013)
+-------------------------
+
+    - prettier progress output and error logging
+    - allow Cabal-1.18
+    - require diagrams-svg >= 0.8.0.1
+
 0.2 (2 September 2013)
 ----------------------
 
