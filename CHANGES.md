@@ -1,3 +1,12 @@
+0.2 (2 September 2013)
+----------------------
+
+    - Take active hsenv into account when looking for distdir (closes #18)
+    - add an option to generate data URIs instead of external SVGs
+    - base generated diagram file names on module name + diagram name,
+      so diagrams with the same name in different files no longer
+      clobber each other
+
 0.1.2.0 (1 September 2013)
 --------------------------
 
