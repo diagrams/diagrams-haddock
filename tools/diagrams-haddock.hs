@@ -116,6 +116,9 @@ processCabalPackage opts dir = do
                               (Just d, _)           -> d
 
                               -- next, look for active hsenv
+                                -- active hsenv with default name
+                              (Nothing, Just "")    -> "dist"
+                                -- active hsenv with custom name
                               (Nothing, Just hsenv) -> "dist_" ++ hsenv
 
                               -- otherwise, default to "dist"
