@@ -237,8 +237,9 @@ requires some extra work to manage the extra files.  To use this method,
 The generated SVG files need to be copied alongside the generated
 Haddock documentation.  There are two good ways to accomplish this:
 
-1.  The `cabal` tool has recently acquired an `extra-doc-files` field
-    (see https://github.com/haskell/cabal/pull/1182 and
+1.  As of version 1.18, The `cabal` tool has acquired an
+    `extra-doc-files` field (see
+    https://github.com/haskell/cabal/pull/1182 and
     https://github.com/haskell/cabal/pull/1427), specifying files
     which should be copied in alongside generated Haddock
     documentation.  So you could simply write something like
@@ -247,14 +248,14 @@ Haddock documentation.  There are two good ways to accomplish this:
     extra-doc-files: diagrams/*.svg
     ```
 
-    in your `.cabal` file.  Unfortunately, it will still be a while
-    until this feature makes its way into a new release of `cabal`,
-    and yet longer before you can be sure that most people who may
-    want to build your package's documentation have the new version.
-    So this is currently a good option only if you have the HEAD
-    version of `cabal` and don't care about others being able to
-    build your documentation.  However, in the not-too-distant future
-    this will become the best option.
+    in your `.cabal` file.  However, as of this writing (October
+    2013), Hackage is not building packages with `cabal-1.18` (see
+    https://github.com/haskell/hackage-server/issues/140).  So this is
+    currently a good option only if you have the latest release of
+    `cabal` and don't care about others (including Hackage) being able
+    to build your documentation.  However, in the
+    hopefully-not-too-distant future (once Hackage switches to
+    `cabal-1.18`) this will become the best option.
 
 2.  In the meantime, it is possible to take advantage of `cabal`'s
     system of user hooks to manually copy the images right after the
