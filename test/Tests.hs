@@ -7,7 +7,7 @@ import           Data.List                            ((\\))
 import qualified Data.Map                             as M
 import qualified Data.Set                             as S
 import           Language.Haskell.Exts.Annotated
-import           Test.Framework                       (defaultMain)
+import           Test.Framework                       (Test, defaultMain)
 import           Test.Framework.Providers.QuickCheck2 (testProperty)
 import           Test.QuickCheck
 import qualified Text.Parsec                          as P
@@ -34,13 +34,13 @@ instance Arbitrary DiagramURL where
 
 instance Arbitrary SrcSpan where
   arbitrary = do
-    NonEmpty fileName  <- arbitrary
-    Positive startLine <- arbitrary
+    NonEmpty fName  <- arbitrary
+    Positive startLn <- arbitrary
     NonNegative startCol  <- arbitrary
     NonNegative numLines  <- arbitrary
     NonNegative numCols   <- arbitrary
 
-    return $ SrcSpan fileName startLine startCol (startLine + numLines) (startCol + numCols)
+    return $ SrcSpan fName startLn startCol (startLn + numLines) (startCol + numCols)
 
 instance Arbitrary Comment where
   arbitrary = Comment <$> arbitrary <*> arbitrary <*> arbitrary
@@ -99,6 +99,7 @@ prop_tc_included s blocks =
   where included       = transitiveClosure s blocks
         includedIdents = S.insert s $ S.unions (map (view codeBlockIdents) included)
 
+tests :: [Test]
 tests =
   [ testProperty "DiagramURL display/parse"      prop_parseDisplay
   , testProperty "CommentWithURLs display/parse" prop_parseDisplayMany
@@ -109,4 +110,5 @@ tests =
   , testProperty "transitiveClosure included bindings" prop_tc_included
   ]
 
+main :: IO ()
 main = defaultMain tests

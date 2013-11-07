@@ -135,12 +135,12 @@ processCabalPackage opts dir = do
         Just lib -> do
           let buildInfo = P.libBuildInfo lib
               srcDirs   = P.hsSourceDirs buildInfo
-              includes  = P.includeDirs buildInfo
-              defines   = P.cppOptions buildInfo
+              incls     = P.includeDirs buildInfo
+              defns     = P.cppOptions buildInfo
               opts' = opts
-                    { includeDirs = includeDirs opts ++ includes
+                    { includeDirs = includeDirs opts ++ incls
                     }
-              cabalDefines = parseCabalDefines defines
+              cabalDefines = parseCabalDefines defns
           mapM_ (tryProcessFile opts' cabalDefines dir srcDirs) . map toFilePath . P.exposedModules $ lib
 
 getHsenv :: IO (Maybe String)
@@ -162,18 +162,18 @@ tryProcessFile
   -> [FilePath]        -- ^ haskell-src-dirs
   -> FilePath          -- ^ name of the module to look for, in \"A/B/C\" form
   -> IO ()
-tryProcessFile opts defines dir srcDirs fileBase = do
+tryProcessFile opts defns dir srcDirs fileBase = do
   let files = [ dir </> srcDir </> fileBase <.> ext
               | srcDir <- srcDirs
               , ext <- ["hs", "lhs"]
               ]
   forM_ files $ \f -> do
     e <- doesFileExist f
-    when e $ processFile opts defines f
+    when e $ processFile opts defns f
 
 -- | Process a single file with diagrams-haddock.
 processFile :: DiagramsHaddock -> [(String,String)] -> FilePath -> IO ()
-processFile opts defines file = do
+processFile opts defns file = do
     errs <- processHaddockDiagrams' cpphsOpts (quiet opts) (dataURIs opts) (cacheDir opts) (outputDir opts) file
     case errs of
       [] -> return ()
@@ -181,6 +181,6 @@ processFile opts defines file = do
   where
     cpphsOpts = defaultCpphsOptions
               { includes = includeDirs opts
-              , defines  = map (,"") (cppDefines opts) ++ defines
+              , defines  = map (,"") (cppDefines opts) ++ defns
               , boolopts = defaultBoolOptions { hashline = False }
               }
