@@ -95,8 +95,7 @@ import           Data.VectorSpace                (zeroV)
 import           Language.Haskell.Exts.Annotated hiding (loc)
 import qualified Language.Haskell.Exts.Annotated as HSE
 import           Language.Preprocessor.Cpphs
-import           System.Console.ANSI             (cursorDownLine,
-                                                  setCursorColumn)
+import           System.Console.ANSI             (setCursorColumn)
 import           System.Directory                (copyFile,
                                                   createDirectoryIfMissing,
                                                   doesFileExist)
@@ -383,7 +382,7 @@ parseCodeBlocks file src =
 --   blocks ultimately needed by the block which defines the desired
 --   identifier.
 transitiveClosure :: String -> [CodeBlock] -> [CodeBlock]
-transitiveClosure ident blocks = tc [ident] blocks
+transitiveClosure ident = tc [ident]
   where
     tc _ [] = []
     tc [] _ = []
