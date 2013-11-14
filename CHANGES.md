@@ -1,3 +1,14 @@
+0.2.1.2 (14 November 2013)
+--------------------------
+
+    - allow base-4.7
+    - allow lens-3.10
+
+0.2.1.1 (14 October 2013)
+-------------------------
+
+    - bug fix: correctly handle hsenv environments with no name
+
 0.2.1 (11 September 2013)
 -------------------------
 
