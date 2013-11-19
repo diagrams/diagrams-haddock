@@ -224,42 +224,42 @@ source file).
 
 ### Using external images
 
-By default, `diagrams-haddock` generates external SVG image files.  This
-makes for a much less invasive changes to your source files, but
-requires some extra work to manage the extra files.  To use this method,
+By default, `diagrams-haddock` generates external SVG image files.
+This makes for much less invasive changes to your source files, but
+requires some work to manage the extra files.  To use this method,
 
 1. Include inline diagrams code and URLs in your source code.
 2. Run `diagrams-haddock`.
-3. Commit the resulting URL changes to your source files *and* the produced SVG files.
+3. Commit the resulting URL changes to your source files *and* the
+   produced SVG files.
 4. Arrange to have the SVG files installed along with your package's
    Haddock documentation (more on this below).
 
-The generated SVG files need to be copied alongside the generated
-Haddock documentation.  There are two good ways to accomplish this:
+The generated SVG files need to be copied in alongside the generated
+Haddock documentation.  There are two ways to accomplish this:
 
-1.  As of version 1.18, The `cabal` tool has acquired an
-    `extra-doc-files` field (see
-    https://github.com/haskell/cabal/pull/1182 and
-    https://github.com/haskell/cabal/pull/1427), specifying files
-    which should be copied in alongside generated Haddock
-    documentation.  So you could simply write something like
+1.  As of `Cabal-1.18`, the `.cabal` file format has acquired
+    an `extra-doc-files` field, specifying files which should be
+    copied in alongside generated Haddock documentation.  So the
+    preferred method is to add something like
 
     ```
+	extra-source-files: README.md, CHANGES.md, diagrams/*.svg
     extra-doc-files: diagrams/*.svg
     ```
 
-    in your `.cabal` file.  However, as of this writing (October
-    2013), Hackage is not building packages with `cabal-1.18` (see
-    https://github.com/haskell/hackage-server/issues/140).  So this is
-    currently a good option only if you have the latest release of
-    `cabal` and don't care about others (including Hackage) being able
-    to build your documentation.  However, in the
-    hopefully-not-too-distant future (once Hackage switches to
-    `cabal-1.18`) this will become the best option.
+    to your `.cabal` file.  Note that you must list the generated
+    images in *both* the `extra-source-files` field (so they will be
+    included in your package tarball) and the `extra-doc-files` field
+    (so they will be copied alongside generated Haddock
+    documentation).  Hackage is now built on `Cabal-1.18`, so
+    uploading a package using the `extra-doc-files` field in this way
+    works just fine.
 
-2.  In the meantime, it is possible to take advantage of `cabal`'s
-    system of user hooks to manually copy the images right after the
-    Haddock documentation is generated.  Add something like
+2.  If you need to make your documentation buildable with a pre-`1.18`
+    version of `cabal-install`, it is possible to take advantage of
+    `cabal`'s system of user hooks to manually copy the images right
+    after the Haddock documentation is generated.  Add something like
 
     ```
     build-type: Custom
