@@ -11,7 +11,7 @@
 -- Include inline diagrams code in Haddock documentation!  For
 -- example, here is a green circle:
 --
--- <<diagrams/greenCircle.svg#diagram=greenCircle&width=200>>
+-- <<diagrams/src_Diagrams_Haddock_greenCircle.svg#diagram=greenCircle&width=200>>
 --
 -- which was literally produced by this code:
 --
