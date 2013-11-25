@@ -1,3 +1,10 @@
+0.2.1.3 (24 November 2013)
+--------------------------
+
+    - update `README`: `extra-doc-files` field in `.cabal` is now supported
+      by Hackage
+    - allow diagrams-lib-1.0 and diagrams-svg-1.0
+
 0.2.1.2 (14 November 2013)
 --------------------------
 
