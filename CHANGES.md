@@ -1,3 +1,9 @@
+0.2.1.4 (26 November 2013)
+--------------------------
+
+    - require diagrams-builder-0.4.2, allowing the use of IO actions
+      producing diagrams
+
 0.2.1.3 (24 November 2013)
 --------------------------
 
