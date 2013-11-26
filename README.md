@@ -62,6 +62,12 @@ one space).  For example,
 -- > myTransf = rotateBy (1/27)
 ```
 
+In this case, `mySquare` has type `Diagram SVG R2`.  Additionally, you
+may give identifiers of type `IO (Diagram SVG R2)`; in that case the
+`IO` action will be run to determine the diagram to render.  This can
+be useful, for example, when producing a diagram built from some
+external data or using randomness.
+
 You can choose to have the code block included in the Haddock output
 or not, simply by putting it in a Haddock comment or not.  Note that
 the code block defining `mySquare` can be anywhere in the same file;
