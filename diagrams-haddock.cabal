@@ -52,7 +52,7 @@ library
                        cpphs >= 1.15,
                        cautious-file >= 1.0 && < 1.1,
                        uniplate >= 1.6 && < 1.7,
-                       text >= 0.11 && < 0.12,
+                       text >= 0.11 && < 1.1,
                        base64-bytestring >= 1 && < 1.1,
                        ansi-terminal >= 0.5 && < 0.7
   hs-source-dirs:      src
