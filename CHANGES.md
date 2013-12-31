@@ -1,3 +1,9 @@
+0.2.1.5 (31 December 2013)
+--------------------------
+
+    - allow text-1.0
+	- allow lens-3.10 for the test suite
+
 0.2.1.4 (26 November 2013)
 --------------------------
 
