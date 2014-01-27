@@ -111,10 +111,7 @@ import qualified Text.Parsec                     as P
 import           Text.Parsec.String
 
 import           Diagrams.Backend.SVG            (Options (..), SVG (..))
-import           Diagrams.Builder                (BuildResult (..),
-                                                  buildDiagram,
-                                                  hashedRegenerate,
-                                                  ppInterpError)
+import qualified Diagrams.Builder                as DB
 import           Diagrams.TwoD.Size              (mkSizeSpec)
 
 ------------------------------------------------------------
@@ -451,28 +448,25 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
         logStr $ "[ ] " ++ (url ^. diagramName)
         IO.hFlush IO.stdout
 
-        buildDiagram
-          SVG
-          zeroV
-          (SVGOptions (mkSizeSpec w h) Nothing)
-          (map (view codeBlockCode) neededCode)
-          (url ^. diagramName)
-          []
-          [ "Diagrams.Backend.SVG" ]
-          (hashedRegenerate (\_ opts -> opts) cacheDir)
+        let bopts = DB.mkBuildOpts SVG zeroV (SVGOptions (mkSizeSpec w h) Nothing)
+                      & DB.snippets .~ map (view codeBlockCode) neededCode
+                      & DB.imports  .~ [ "Diagrams.Backend.SVG" ]
+                      & DB.diaExpr  .~ (url ^. diagramName)
+                      & DB.decideRegen .~ (DB.hashedRegenerate (\_ opts -> opts) cacheDir)
+        DB.buildDiagram bopts
 
       case res of
         -- XXX incorporate these into error reporting framework instead of printing
-        ParseErr err    -> do
+        DB.ParseErr err    -> do
           tell [errHeader ++ "Parse error: " ++ err]
           logResult "!"
           return oldURL
-        InterpErr ierr  -> do
-          tell [errHeader ++ "Interpreter error: " ++ ppInterpError ierr]
+        DB.InterpErr ierr  -> do
+          tell [errHeader ++ "Interpreter error: " ++ DB.ppInterpError ierr]
           logResult "!"
           return oldURL
-        Skipped hash    -> do
-          let cached = mkCached hash
+        DB.Skipped hash    -> do
+          let cached = mkCached (DB.hashToHexStr hash)
           when (not dataURIs) $ liftIO $ copyFile cached outFile
           logResult "."
           if dataURIs
@@ -480,8 +474,8 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
               svgBS <- liftIO $ BS.readFile cached
               return (newURL (mkDataURI svgBS))
             else return (newURL outFile)
-        OK hash svg     -> do
-          let cached = mkCached hash
+        DB.OK hash svg     -> do
+          let cached = mkCached (DB.hashToHexStr hash)
               svgBS  = renderSvg svg
           liftIO $ BS.writeFile cached svgBS
           url' <- if dataURIs
