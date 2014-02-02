@@ -73,7 +73,9 @@ module Diagrams.Haddock
 
 import           Control.Applicative             hiding (many, (<|>))
 import           Control.Arrow                   (first, (&&&), (***))
-import           Control.Lens                    hiding ((<.>))
+import           Control.Lens                    ( (^.), (%~), (&), (.~), (%%~)
+                                                 , _2, orOf, traverse, view
+                                                 , _Right, makeLenses)
 import           Control.Monad.Writer
 import qualified Data.ByteString.Base64.Lazy     as BS64
 import qualified Data.ByteString.Lazy            as BS
