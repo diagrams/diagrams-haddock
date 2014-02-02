@@ -48,7 +48,7 @@ library
                        diagrams-lib >= 0.6 && < 1.1,
                        diagrams-svg >= 0.8.0.1 && < 1.1,
                        vector-space >= 0.8 && < 0.9,
-                       lens >= 3.8 && < 3.11,
+                       lens >= 3.8 && < 4.1,
                        cpphs >= 1.15,
                        cautious-file >= 1.0 && < 1.1,
                        uniplate >= 1.6 && < 1.7,
