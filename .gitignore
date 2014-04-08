@@ -11,3 +11,5 @@ dist_*
 .hsenv*
 TAGS
 .diagrams-cache
+.cabal-sandbox
+cabal.sandbox.config
