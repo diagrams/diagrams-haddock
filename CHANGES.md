@@ -1,3 +1,8 @@
+0.2.2.5 (7 April 2014)
+----------------------
+
+  - switch to tasty framework for tests, and allow `QuickCheck-2.7`
+
 0.2.2.4 (20 March 2014)
 ----------------------
 
