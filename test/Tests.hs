@@ -3,18 +3,32 @@
 module Main where
 
 import           Control.Applicative
-import           Control.Lens                         (view)
-import           Data.Either                          (rights)
-import           Data.List                            ((\\))
-import qualified Data.Map                             as M
-import qualified Data.Set                             as S
+import           Control.Lens                    (view)
+import           Data.Either                     (rights)
+import           Data.List                       ((\\))
+import qualified Data.Map                        as M
+import qualified Data.Set                        as S
 import           Language.Haskell.Exts.Annotated
-import           Test.Framework                       (Test, defaultMain)
-import           Test.Framework.Providers.QuickCheck2 (testProperty)
 import           Test.QuickCheck
-import qualified Text.Parsec                          as P
+import           Test.Tasty
+import           Test.Tasty.QuickCheck           as QC
+import qualified Text.Parsec                     as P
 
 import           Diagrams.Haddock
+
+main :: IO ()
+main = defaultMain tests
+
+tests :: TestTree
+tests = testGroup "Properties"
+  [ QC.testProperty "DiagramURL display/parse"      prop_parseDisplay
+  , QC.testProperty "CommentWithURLs display/parse" prop_parseDisplayMany
+  , QC.testProperty "parseDiagramURLs succeeds"     prop_parseDiagramURLs_succeeds
+
+  , QC.testProperty "transitiveClosure subset"         prop_tc_subset
+  , QC.testProperty "transitiveClosure excluded bindings" prop_tc_excluded
+  , QC.testProperty "transitiveClosure included bindings" prop_tc_included
+  ]
 
 newtype EString = EString { getEString :: String }
   deriving (Eq, Show)
@@ -101,16 +115,4 @@ prop_tc_included s blocks =
   where included       = transitiveClosure s blocks
         includedIdents = S.insert s $ S.unions (map (view codeBlockIdents) included)
 
-tests :: [Test]
-tests =
-  [ testProperty "DiagramURL display/parse"      prop_parseDisplay
-  , testProperty "CommentWithURLs display/parse" prop_parseDisplayMany
-  , testProperty "parseDiagramURLs succeeds"     prop_parseDiagramURLs_succeeds
 
-  , testProperty "transitiveClosure subset"         prop_tc_subset
-  , testProperty "transitiveClosure excluded bindings" prop_tc_excluded
-  , testProperty "transitiveClosure included bindings" prop_tc_included
-  ]
-
-main :: IO ()
-main = defaultMain tests
