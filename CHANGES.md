@@ -3,6 +3,8 @@
 
   - allow `diagrams-lib-1.2`, `diagrams-core-1.2`
   - allow `cabal-1.20`
+  - allow `mtl-2.2`
+  - allow `lens-4.2`
 
 0.2.2.7 (16 April 2014)
 -----------------------
