@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/diagrams/diagrams-haddock.png?branch=master)](http://travis-ci.org/diagrams/diagrams-haddock)
+
 # diagrams-haddock
 
 `diagrams-haddock` is a preprocessor which allows embedding images
