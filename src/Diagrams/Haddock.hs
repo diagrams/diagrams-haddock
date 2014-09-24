@@ -93,7 +93,6 @@ import           Data.Maybe                      (catMaybes, mapMaybe)
 import qualified Data.Set                        as S
 import qualified Data.Text.Lazy                  as T
 import qualified Data.Text.Lazy.Encoding         as T
-import           Data.VectorSpace                (zeroV)
 import           Language.Haskell.Exts.Annotated hiding (loc)
 import qualified Language.Haskell.Exts.Annotated as HSE
 import           Language.Preprocessor.Cpphs
@@ -115,6 +114,7 @@ import           Text.Parsec.String
 import           Diagrams.Backend.SVG            (Options (..), SVG (..))
 import qualified Diagrams.Builder                as DB
 import           Diagrams.TwoD.Size              (mkSizeSpec)
+import Diagrams.Prelude (V2, zero)
 
 ------------------------------------------------------------
 -- Utilities
@@ -317,7 +317,7 @@ collectBindings _ = S.empty
 getBinding :: Decl l -> Maybe String
 getBinding (FunBind _ [])                     = Nothing
 getBinding (FunBind _ (Match _ nm _ _ _ : _)) = Just $ getName nm
-getBinding (PatBind _ (PVar _ nm) _ _ _)      = Just $ getName nm
+getBinding (PatBind _ (PVar _ nm) _ _)      = Just $ getName nm
 getBinding _                                  = Nothing
 
 getName :: Name l -> String
@@ -433,6 +433,7 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
 
           munge   = intercalate "_" . splitDirectories . normalise . dropExtension
 
+          w, h :: Maybe Double
           w = read <$> M.lookup "width" (url ^. diagramOpts)
           h = read <$> M.lookup "height" (url ^. diagramOpts)
 
@@ -450,7 +451,9 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
         logStr $ "[ ] " ++ (url ^. diagramName)
         IO.hFlush IO.stdout
 
-        let bopts = DB.mkBuildOpts SVG zeroV (SVGOptions (mkSizeSpec w h) Nothing)
+        let
+                     bopts :: DB.BuildOpts SVG V2 Double
+                     bopts = DB.mkBuildOpts SVG zero (SVGOptions (mkSizeSpec w h) Nothing)
                       & DB.snippets .~ map (view codeBlockCode) neededCode
                       & DB.imports  .~ [ "Diagrams.Backend.SVG" ]
                       & DB.diaExpr  .~ (url ^. diagramName)
