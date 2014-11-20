@@ -113,7 +113,7 @@ import           Text.Parsec.String
 
 import           Diagrams.Backend.SVG            (Options (..), SVG (..))
 import qualified Diagrams.Builder                as DB
-import           Diagrams.TwoD.Size              (mkSizeSpec)
+import           Diagrams.TwoD.Size              (mkSizeSpec2D)
 import Diagrams.Prelude (V2, zero)
 
 ------------------------------------------------------------
@@ -453,7 +453,7 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
 
         let
                      bopts :: DB.BuildOpts SVG V2 Double
-                     bopts = DB.mkBuildOpts SVG zero (SVGOptions (mkSizeSpec w h) Nothing)
+                     bopts = DB.mkBuildOpts SVG zero (SVGOptions (mkSizeSpec2D w h) Nothing)
                       & DB.snippets .~ map (view codeBlockCode) neededCode
                       & DB.imports  .~ [ "Diagrams.Backend.SVG" ]
                       & DB.diaExpr  .~ (url ^. diagramName)
