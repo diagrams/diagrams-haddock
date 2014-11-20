@@ -1,3 +1,11 @@
+0.2.2.12 (20 November 2014)
+---------------------------
+
+- Allow `lens-4.6`
+- Allow `text-1.2`
+- Allow and require `haskell-src-exts-1.16`
+
+
 0.2.2.11 (22 August 2014)
 -------------------------
 
