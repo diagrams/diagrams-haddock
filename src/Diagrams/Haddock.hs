@@ -317,7 +317,7 @@ collectBindings _ = S.empty
 getBinding :: Decl l -> Maybe String
 getBinding (FunBind _ [])                     = Nothing
 getBinding (FunBind _ (Match _ nm _ _ _ : _)) = Just $ getName nm
-getBinding (PatBind _ (PVar _ nm) _ _ _)      = Just $ getName nm
+getBinding (PatBind _ (PVar _ nm) _ _)      = Just $ getName nm
 getBinding _                                  = Nothing
 
 getName :: Name l -> String
