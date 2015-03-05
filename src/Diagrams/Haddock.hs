@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
 -----------------------------------------------------------------------------
@@ -73,9 +74,9 @@ module Diagrams.Haddock
 
 import           Control.Applicative             hiding (many, (<|>))
 import           Control.Arrow                   (first, (&&&), (***))
-import           Control.Lens                    ( (^.), (%~), (&), (.~), (%%~)
-                                                 , _2, orOf, traverse, view
-                                                 , _Right, makeLenses)
+import           Control.Lens                    (makeLenses, orOf, traverse,
+                                                  view, (%%~), (%~), (&), (.~),
+                                                  (^.), _2, _Right)
 import           Control.Monad.Writer
 import qualified Data.ByteString.Base64.Lazy     as BS64
 import qualified Data.ByteString.Lazy            as BS
@@ -96,6 +97,7 @@ import qualified Data.Text.Lazy.Encoding         as T
 import           Language.Haskell.Exts.Annotated hiding (loc)
 import qualified Language.Haskell.Exts.Annotated as HSE
 import           Language.Preprocessor.Cpphs
+import qualified Lucid.Svg                       as L
 import           System.Console.ANSI             (setCursorColumn)
 import           System.Directory                (copyFile,
                                                   createDirectoryIfMissing,
@@ -106,15 +108,14 @@ import           System.FilePath                 (dropExtension, normalise,
 import qualified System.IO                       as IO
 import qualified System.IO.Cautious              as Cautiously
 import qualified System.IO.Strict                as Strict
-import           Text.Blaze.Svg.Renderer.Utf8    (renderSvg)
 import           Text.Parsec
 import qualified Text.Parsec                     as P
 import           Text.Parsec.String
 
 import           Diagrams.Backend.SVG            (Options (..), SVG (..))
 import qualified Diagrams.Builder                as DB
+import           Diagrams.Prelude                (V2, zero)
 import           Diagrams.TwoD.Size              (mkSizeSpec2D)
-import Diagrams.Prelude (V2, zero)
 
 ------------------------------------------------------------
 -- Utilities
@@ -453,7 +454,7 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
 
         let
                      bopts :: DB.BuildOpts SVG V2 Double
-                     bopts = DB.mkBuildOpts SVG zero (SVGOptions (mkSizeSpec2D w h) Nothing)
+                     bopts = DB.mkBuildOpts SVG zero (SVGOptions (mkSizeSpec2D w h) [] "")
                       & DB.snippets .~ map (view codeBlockCode) neededCode
                       & DB.imports  .~ [ "Diagrams.Backend.SVG" ]
                       & DB.diaExpr  .~ (url ^. diagramName)
@@ -481,7 +482,7 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
             else return (newURL outFile)
         DB.OK hash svg     -> do
           let cached = mkCached (DB.hashToHexStr hash)
-              svgBS  = renderSvg svg
+              svgBS  = L.renderBS svg
           liftIO $ BS.writeFile cached svgBS
           url' <- if dataURIs
                     then return (newURL (mkDataURI svgBS))
