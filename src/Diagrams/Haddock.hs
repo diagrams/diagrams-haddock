@@ -73,9 +73,9 @@ module Diagrams.Haddock
 
 import           Control.Applicative             hiding (many, (<|>))
 import           Control.Arrow                   (first, (&&&), (***))
-import           Control.Lens                    ( (^.), (%~), (&), (.~), (%%~)
-                                                 , _2, orOf, traverse, view
-                                                 , _Right, makeLenses)
+import           Control.Lens                    (makeLenses, orOf, traverse,
+                                                  view, (%%~), (%~), (&), (.~),
+                                                  (^.), _2, _Right)
 import           Control.Monad.Writer
 import qualified Data.ByteString.Base64.Lazy     as BS64
 import qualified Data.ByteString.Lazy            as BS
@@ -321,7 +321,7 @@ getBinding (PatBind _ (PVar _ nm) _ _)      = Just $ getName nm
 getBinding _                                  = Nothing
 
 getName :: Name l -> String
-getName (Ident _ s)  = s
+getName (HSE.Ident _ s)  = s
 getName (Symbol _ s) = s
 
 getQName :: QName l -> Maybe String
