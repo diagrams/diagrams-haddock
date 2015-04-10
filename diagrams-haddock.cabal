@@ -33,7 +33,7 @@ Source-repository head
 
 library
   exposed-modules:     Diagrams.Haddock
-  build-depends:       base >= 4.4 && < 4.8,
+  build-depends:       base >= 4.4 && < 4.9,
                        filepath,
                        directory,
                        mtl >= 2.0 && < 2.3,
@@ -44,11 +44,11 @@ library
                        parsec >= 3,
                        haskell-src-exts >= 1.16 && < 1.17,
                        lucid-svg >= 0.4.0.3 && < 0.5,
-                       diagrams-builder >= 0.5 && < 0.7,
-                       diagrams-lib >= 0.6 && < 1.3,
-                       diagrams-svg >= 0.8.0.1 && < 1.2,
-                       lens >= 3.8 && < 4.8,
-                       linear >= 1.10 && < 1.17,
+                       diagrams-builder >= 0.5 && < 0.8,
+                       diagrams-lib >= 0.6 && < 1.4,
+                       diagrams-svg >= 0.8.0.1 && < 1.4,
+                       lens >= 3.8 && < 4.10,
+                       linear >= 1.10 && < 1.19,
                        cpphs >= 1.15,
                        cautious-file >= 1.0 && < 1.1,
                        uniplate >= 1.6 && < 1.7,
@@ -80,7 +80,7 @@ Test-suite diagrams-haddock-tests
                        tasty >= 0.8 && < 0.11,
                        tasty-quickcheck >= 0.8 && < 0.9,
                        parsec >= 3,
-                       lens >= 3.8 && < 4.8,
+                       lens >= 3.8 && < 4.10,
                        haskell-src-exts >= 1.16 && < 1.17,
                        diagrams-haddock
   hs-source-dirs:      test
