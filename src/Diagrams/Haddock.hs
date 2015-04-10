@@ -322,7 +322,7 @@ getBinding (PatBind _ (PVar _ nm) _ _)      = Just $ getName nm
 getBinding _                                  = Nothing
 
 getName :: Name l -> String
-getName (Ident _ s)  = s
+getName (HSE.Ident _ s)  = s
 getName (Symbol _ s) = s
 
 getQName :: QName l -> Maybe String
