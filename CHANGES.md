@@ -1,3 +1,8 @@
+0.3
+----------------------
+
+- Allow `diagrams-builder-0.7`, `diagrams-lib-1.3`, and `diagrams-svg-1.3`
+
 0.2.2.14 (2 April 2015)
 -----------------------
 
