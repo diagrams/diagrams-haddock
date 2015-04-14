@@ -21,7 +21,7 @@ matrix:
     - env: GHCVER=head CABALVER=head
 
 before_install:
-  - echo "constraints:transformers installed, ghc installed" >> cabal.config
+  - echo "constraints:ghc installed" >> cabal.config
   - git clone http://github.com/diagrams/diagrams-travis travis
   - source travis/scripts/set_env.sh
   - ./travis/scripts/before_install.sh
