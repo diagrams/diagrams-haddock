@@ -21,7 +21,12 @@ matrix:
     - env: GHCVER=head CABALVER=head
 
 before_install:
-  - echo "constraints:ghc installed" >> cabal.config
+  - |
+    if [ $GHCVER = "7.8.4" || $GHCVER eq "7.10.1" ]; then
+      echo "constraints:transformers installed, ghc installed" >> cabal.config
+    else
+      echo "constraints:ghc installed" >> cabal.config
+    fi
   - git clone http://github.com/diagrams/diagrams-travis travis
   - source travis/scripts/set_env.sh
   - ./travis/scripts/before_install.sh
