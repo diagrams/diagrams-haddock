@@ -1,6 +1,12 @@
-0.3.0.1 (20 April 2015)
+0.3.0.2 (29 April 2015)
+-----------------------
 
- - ghc-7.10 compatability
+- allow QuickCheck-2.8 in test suite
+
+0.3.0.1 (20 April 2015)
+-----------------------
+
+- ghc-7.10 compatability
 
 0.3 (19 April 2015)
 -------------------
