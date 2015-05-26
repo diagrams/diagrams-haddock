@@ -1,3 +1,7 @@
+## [v0.3.0.4](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.4) (2015-05-26)
+
+[Full Changelog](https://github.com/diagrams/diagrams-haddock/compare/v0.3.0.3...v0.3.0.4)
+
 0.3.0.3 (29 April 2015)
 -----------------------
 
