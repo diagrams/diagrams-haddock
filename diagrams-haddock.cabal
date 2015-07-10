@@ -1,5 +1,5 @@
 name:                diagrams-haddock
-version:             0.3.0.4
+version:             0.3.0.5
 synopsis:            Preprocessor for embedding diagrams in Haddock documentation
 description:         diagrams-haddock is a tool for compiling embedded inline
                      diagrams code in Haddock documentation, for an
@@ -44,7 +44,7 @@ library
                        strict >= 0.3 && < 0.4,
                        parsec >= 3,
                        haskell-src-exts >= 1.16 && < 1.17,
-                       lucid-svg >= 0.4.0.3 && < 0.5,
+                       lucid-svg >= 0.5 && < 0.6,
                        diagrams-builder >= 0.5 && < 0.8,
                        diagrams-lib >= 0.6 && < 1.4,
                        diagrams-svg >= 0.8.0.1 && < 1.4,

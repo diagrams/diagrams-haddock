@@ -1,3 +1,8 @@
+0.3.0.5 (10 July 2015)
+-----------------------
+
+- Allow `lucid-svg-0.5
+
 ## [v0.3.0.4](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.4) (2015-05-26)
 
 [Full Changelog](https://github.com/diagrams/diagrams-haddock/compare/v0.3.0.3...v0.3.0.4)
