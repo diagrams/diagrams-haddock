@@ -1,3 +1,9 @@
+## [v0.3.0.7](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.7) (2015-09-22)
+
+- Allow `lens-4.13`, `linear-1.20`, and `tasty-0.11`
+
+[Full Changelog](https://github.com/diagrams/diagrams-haddock/compare/v0.3.0.6...v0.3.0.7)
+
 ## [v0.3.0.6](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.6) (2015-07-19)
 
 [Full Changelog](https://github.com/diagrams/diagrams-haddock/compare/v0.3.0.5...v0.3.0.6)
