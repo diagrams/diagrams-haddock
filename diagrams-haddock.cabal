@@ -34,6 +34,7 @@ Source-repository head
 
 library
   exposed-modules:     Diagrams.Haddock
+  other-modules:       Paths_diagrams_haddock
   build-depends:       base >= 4.4 && < 4.9,
                        filepath,
                        directory,
