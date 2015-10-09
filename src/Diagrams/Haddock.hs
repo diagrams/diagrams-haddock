@@ -455,7 +455,7 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
 
         let
                      bopts :: DB.BuildOpts SVG V2 Double
-                     bopts = DB.mkBuildOpts SVG zero (SVGOptions (mkSizeSpec2D w h) Nothing "")
+                     bopts = DB.mkBuildOpts SVG zero (SVGOptions (mkSizeSpec2D w h) Nothing "" [] False)
                       & DB.snippets .~ map (view codeBlockCode) neededCode
                       & DB.imports  .~ [ "Diagrams.Backend.SVG" ]
                       & DB.diaExpr  .~ (url ^. diagramName)
