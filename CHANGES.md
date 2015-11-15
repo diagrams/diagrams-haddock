@@ -1,3 +1,7 @@
+## [v0.3.0.8](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.8) (2015-11-15)
+
+- Allow `lucid-svg-0.6`
+
 ## [v0.3.0.7](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.7) (2015-09-22)
 
 - Allow `lens-4.13`, `linear-1.20`, and `tasty-0.11`
