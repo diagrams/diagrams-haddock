@@ -98,7 +98,7 @@ import qualified Data.Text.Lazy.Encoding         as T
 import           Language.Haskell.Exts.Annotated hiding (loc)
 import qualified Language.Haskell.Exts.Annotated as HSE
 import           Language.Preprocessor.Cpphs
-import qualified Lucid.Svg                       as L
+import qualified Graphics.Svg                    as G
 import           System.Console.ANSI             (setCursorColumn)
 import           System.Directory                (copyFile,
                                                   createDirectoryIfMissing,
@@ -483,7 +483,7 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
             else return (newURL outFile)
         DB.OK hash svg     -> do
           let cached = mkCached (DB.hashToHexStr hash)
-              svgBS  = L.renderBS svg
+              svgBS  = G.renderBS svg
           liftIO $ BS.writeFile cached svgBS
           url' <- if dataURIs
                     then return (newURL (mkDataURI svgBS))
