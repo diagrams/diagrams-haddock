@@ -1,6 +1,15 @@
-## [v0.3.0.8](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.8) (2015-11-15)
+## [v0.3.0.10](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.10) (2015-12-06)
+
+- allow `haskell-src-exts-1.17.*`
+
+## [v0.3.0.9](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.9) (2015-11-20)
 
 - Allow `lucid-svg-0.6`
+- Fix broken v0.3.0.8
+
+## [v0.3.0.8](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.8) (2015-11-15)
+
+- Don't use this version.
 
 ## [v0.3.0.7](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.7) (2015-09-22)
 
