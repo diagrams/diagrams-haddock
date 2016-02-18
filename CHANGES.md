@@ -1,3 +1,7 @@
+## [v0.3.0.11](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.11) (2016-02-18)
+
+- allow `diagrams-svg-1.4`
+
 ## [v0.3.0.10](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.10) (2015-12-06)
 
 - allow `haskell-src-exts-1.17.*`
