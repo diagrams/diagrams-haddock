@@ -47,7 +47,7 @@ library
                        lucid-svg >= 0.5 && < 0.7,
                        diagrams-builder >= 0.5 && < 0.8,
                        diagrams-lib >= 0.6 && < 1.4,
-                       diagrams-svg >= 0.8.0.1 && < 1.4,
+                       diagrams-svg >= 0.8.0.1 && < 1.5,
                        lens >= 3.8 && < 4.14,
                        linear >= 1.10 && < 1.21,
                        cpphs >= 1.15,
