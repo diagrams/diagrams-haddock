@@ -15,6 +15,7 @@ import           Distribution.ModuleName            (toFilePath)
 import qualified Distribution.PackageDescription    as P
 import           Distribution.Simple.Configure      (maybeGetPersistBuildConfig)
 import           Distribution.Simple.LocalBuildInfo (localPkgDescr)
+import           Distribution.Simple.Utils          (cabalVersion)
 
 import           Language.Preprocessor.Cpphs
 
@@ -75,7 +76,8 @@ diagramsHaddockOpts
   }
   &= program "diagrams-haddock"
   &= summary (unlines
-       [ "diagrams-haddock v" ++ showVersion version ++ ", (c) 2013 diagrams-haddock team (see LICENSE)"
+       [ "diagrams-haddock v" ++ showVersion version ++ ", (c) 2013-2016 diagrams-haddock team (see LICENSE)"
+       , "compiled using version " ++ showVersion cabalVersion ++ " of the Cabal library"
        , ""
        , "Compile inline diagrams code in Haddock documentation."
        , ""
@@ -126,8 +128,16 @@ processCabalPackage opts dir = do
 
   mlbi <- maybeGetPersistBuildConfig fullDistDir
   case mlbi of
-    Nothing -> putStrLn $
-      "No setup-config found in " ++ fullDistDir ++ ", please run 'cabal configure' first."
+    Nothing -> putStrLn $ unlines [
+        "diagrams-haddock: No appropriate setup-config found in " ++ fullDistDir
+      , "Either it does not exist or it is in the wrong format."
+      , "* You may need to run 'cabal configure' first."
+      , "* Make sure that the version of Cabal used to compile"
+      , "  diagrams-haddock (" ++ showVersion cabalVersion ++ ") matches the version used"
+      , "  by the cabal tool."
+      , "* Use the -d option if you want diagrams-haddock to look in"
+      , "  a different dist directory."
+      ]
     Just lbi -> do
       let mlib = P.library . localPkgDescr $ lbi
       case mlib of
