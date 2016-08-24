@@ -95,8 +95,8 @@ import           Data.Maybe                      (catMaybes, mapMaybe)
 import qualified Data.Set                        as S
 import qualified Data.Text.Lazy                  as T
 import qualified Data.Text.Lazy.Encoding         as T
-import           Language.Haskell.Exts.Annotated hiding (loc)
-import qualified Language.Haskell.Exts.Annotated as HSE
+import           Language.Haskell.Exts           hiding (loc)
+import qualified Language.Haskell.Exts           as HSE
 import           Language.Preprocessor.Cpphs
 import qualified Graphics.Svg                    as G
 import           System.Console.ANSI             (setCursorColumn)

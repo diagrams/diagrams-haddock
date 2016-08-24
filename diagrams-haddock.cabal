@@ -35,7 +35,7 @@ Source-repository head
 library
   exposed-modules:     Diagrams.Haddock
   other-modules:       Paths_diagrams_haddock
-  build-depends:       base >= 4.4 && < 4.9,
+  build-depends:       base >= 4.4 && < 5.0,
                        filepath,
                        directory,
                        mtl >= 2.0 && < 2.3,
@@ -44,12 +44,12 @@ library
                        bytestring >= 0.9 && < 0.11,
                        strict >= 0.3 && < 0.4,
                        parsec >= 3,
-                       haskell-src-exts >= 1.16 && < 1.18,
+                       haskell-src-exts >= 1.16 && < 1.19,
                        svg-builder >= 0.1 && < 0.2,
                        diagrams-builder >= 0.5 && < 0.8,
                        diagrams-lib >= 0.6 && < 1.4,
                        diagrams-svg >= 1.4 && < 1.5,
-                       lens >= 3.8 && < 4.14,
+                       lens >= 3.8 && < 4.15,
                        linear >= 1.10 && < 1.21,
                        cpphs >= 1.15,
                        cautious-file >= 1.0 && < 1.1,
@@ -68,7 +68,7 @@ Executable diagrams-haddock
                        filepath,
                        diagrams-haddock,
                        cmdargs >= 0.8 && < 0.11,
-                       Cabal >= 1.14 && < 1.23,
+                       Cabal >= 1.14 && < 1.25,
                        cpphs >= 1.15
   hs-source-dirs:      tools
   default-language:    Haskell2010
@@ -82,8 +82,8 @@ Test-suite diagrams-haddock-tests
                        tasty >= 0.8 && < 0.12,
                        tasty-quickcheck >= 0.8 && < 0.9,
                        parsec >= 3,
-                       lens >= 3.8 && < 4.14,
-                       haskell-src-exts >= 1.16 && < 1.18,
+                       lens >= 3.8 && < 4.15,
+                       haskell-src-exts >= 1.16 && < 1.19,
                        diagrams-haddock
   hs-source-dirs:      test
   default-language:    Haskell2010
