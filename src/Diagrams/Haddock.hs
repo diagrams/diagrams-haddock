@@ -1,5 +1,5 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
@@ -73,50 +73,47 @@ module Diagrams.Haddock
 
     ) where
 
-import           Control.Applicative             hiding (many, (<|>))
-import           Control.Arrow                   (first, (&&&), (***))
-import           Control.Lens                    (makeLenses, orOf, traverse,
-                                                  view, (%%~), (%~), (&), (.~),
-                                                  (^.), _2, _Right)
+import           Control.Arrow               (first, (&&&), (***))
+import           Control.Lens                (makeLenses, orOf, view, (%%~),
+                                              (%~), (&), (.~), (^.), _2, _Right)
 import           Control.Monad.Writer
-import qualified Data.ByteString.Base64.Lazy     as BS64
-import qualified Data.ByteString.Lazy            as BS
-import qualified Data.ByteString.Lazy.Char8      as BS8
-import           Data.Char                       (isSpace)
-import           Data.Either                     (lefts, rights)
-import           Data.Function                   (on)
-import           Data.Generics.Uniplate.Data     (universeBi)
-import           Data.List                       (groupBy, intercalate,
-                                                  isPrefixOf, partition)
-import           Data.List.Split                 (dropBlanks, dropDelims, split,
-                                                  whenElt)
-import qualified Data.Map                        as M
-import           Data.Maybe                      (catMaybes, mapMaybe)
-import qualified Data.Set                        as S
-import qualified Data.Text.Lazy                  as T
-import qualified Data.Text.Lazy.Encoding         as T
-import           Language.Haskell.Exts           hiding (loc)
-import qualified Language.Haskell.Exts           as HSE
+import qualified Data.ByteString.Base64.Lazy as BS64
+import qualified Data.ByteString.Lazy        as BS
+import qualified Data.ByteString.Lazy.Char8  as BS8
+import           Data.Char                   (isSpace)
+import           Data.Either                 (lefts, rights)
+import           Data.Function               (on)
+import           Data.Generics.Uniplate.Data (universeBi)
+import           Data.List                   (groupBy, intercalate, isPrefixOf,
+                                              partition)
+import           Data.List.Split             (dropBlanks, dropDelims, split,
+                                              whenElt)
+import qualified Data.Map                    as M
+import           Data.Maybe                  (catMaybes, mapMaybe)
+import qualified Data.Set                    as S
+import qualified Data.Text.Lazy              as T
+import qualified Data.Text.Lazy.Encoding     as T
+import qualified Graphics.Svg                as G
+import           Language.Haskell.Exts       hiding (loc)
+import qualified Language.Haskell.Exts       as HSE
 import           Language.Preprocessor.Cpphs
-import qualified Graphics.Svg                    as G
-import           System.Console.ANSI             (setCursorColumn)
-import           System.Directory                (copyFile,
-                                                  createDirectoryIfMissing,
-                                                  doesFileExist)
-import           System.FilePath                 (dropExtension, normalise,
-                                                  splitDirectories, (<.>),
-                                                  (</>))
-import qualified System.IO                       as IO
-import qualified System.IO.Cautious              as Cautiously
-import qualified System.IO.Strict                as Strict
+import           System.Console.ANSI         (setCursorColumn)
+import           System.Directory            (copyFile,
+                                              createDirectoryIfMissing,
+                                              doesFileExist)
+import           System.FilePath             (dropExtension, normalise,
+                                              splitDirectories, (<.>), (</>))
+import qualified System.IO                   as IO
+import qualified System.IO.Cautious          as Cautiously
+import qualified System.IO.Strict            as Strict
 import           Text.Parsec
-import qualified Text.Parsec                     as P
+import qualified Text.Parsec                 as P
 import           Text.Parsec.String
 
-import           Diagrams.Backend.SVG            (Options (..), SVG (..))
-import qualified Diagrams.Builder                as DB
-import           Diagrams.Prelude                (V2, zero)
-import           Diagrams.TwoD.Size              (mkSizeSpec2D)
+import           Diagrams.Backend.SVG        (Options (..), SVG (..))
+import qualified Diagrams.Builder            as DB
+import           Diagrams.Prelude            (V2, zero)
+import           Diagrams.TwoD.Size          (mkSizeSpec2D)
 
 ------------------------------------------------------------
 -- Utilities
