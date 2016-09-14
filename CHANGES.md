@@ -1,6 +1,10 @@
-## [v0.3.0.11](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.11) (2016-02-18)
+## [v0.4](https://github.com/diagrams/diagrams-haddock/tree/v0.4) (XXX)
 
-- allow `diagrams-svg-1.4`
+- Build with `ghc-8.0`
+- Improved error message when `setup-config` can't be read
+- Replace `lucid-svg` with `svg-builder`
+- Allow `diagrams-svg-1.4`
+- Allow `haskell-src-exts-1.18`
 
 ## [v0.3.0.10](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.10) (2015-12-06)
 
