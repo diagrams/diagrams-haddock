@@ -5,6 +5,7 @@
 - Replace `lucid-svg` with `svg-builder`
 - Allow `diagrams-svg-1.4`
 - Allow `haskell-src-exts-1.18`
+- Allow `diagrams-builder-0.8`
 
 ## [v0.3.0.10](https://github.com/diagrams/diagrams-haddock/tree/v0.3.0.10) (2015-12-06)
 
