@@ -119,15 +119,22 @@ import           Diagrams.TwoD.Size          (mkSizeSpec2D)
 -- Utilities
 ------------------------------------------------------------
 
+-- | Pretty-print a parse failure at a particular location.
 showParseFailure :: SrcLoc -> String -> String
 showParseFailure loc err = unlines [ prettyPrint loc, err ]
 
+-- | A simple monad for collecting a list of error messages.  There is
+--   no facility for failing as such---in this model one simply
+--   generates an error message and moves on.
 newtype CollectErrors a = CE { unCE :: Writer [String] a }
   deriving (Functor, Applicative, Monad, MonadWriter [String])
 
+-- | Generate an error message and fail (by returning @Nothing@).
 failWith :: String -> CollectErrors (Maybe a)
 failWith err = tell [err] >> return Nothing
 
+-- | Run a @CollectErrors@ computation, resulting in a value of type
+--   @a@ along with the collection of generated error messages.
 runCE :: CollectErrors a -> (a, [String])
 runCE = runWriter . unCE
 
