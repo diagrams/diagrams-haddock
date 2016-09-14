@@ -3,16 +3,15 @@
 module Main where
 
 import           Control.Applicative
-import           Control.Lens                    (view)
-import           Data.Either                     (rights)
-import           Data.List                       ((\\))
-import qualified Data.Map                        as M
-import qualified Data.Set                        as S
-import           Language.Haskell.Exts.Annotated
+import           Control.Lens          (view)
+import           Data.Either           (rights)
+import           Data.List             ((\\))
+import qualified Data.Map              as M
+import qualified Data.Set              as S
 import           Test.QuickCheck
 import           Test.Tasty
-import           Test.Tasty.QuickCheck           as QC
-import qualified Text.Parsec                     as P
+import           Test.Tasty.QuickCheck as QC
+import qualified Text.Parsec           as P
 
 import           Diagrams.Haddock
 
@@ -47,19 +46,6 @@ instance Arbitrary DiagramURL where
     where
       s    = getEString <$> arbitrary
       opts = (M.fromList . (map . both) getEString) <$> arbitrary
-
-instance Arbitrary SrcSpan where
-  arbitrary = do
-    NonEmpty fName  <- arbitrary
-    Positive startLn <- arbitrary
-    NonNegative startCol  <- arbitrary
-    NonNegative numLines  <- arbitrary
-    NonNegative numCols   <- arbitrary
-
-    return $ SrcSpan fName startLn startCol (startLn + numLines) (startCol + numCols)
-
-instance Arbitrary Comment where
-  arbitrary = Comment <$> arbitrary <*> arbitrary <*> arbitrary
 
 prop_parseDisplay :: DiagramURL -> Bool
 prop_parseDisplay d
