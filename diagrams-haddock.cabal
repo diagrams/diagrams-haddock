@@ -78,7 +78,7 @@ Test-suite diagrams-haddock-tests
   main-is:             Tests.hs
   build-depends:       base,
                        containers >= 0.4 && < 0.6,
-                       QuickCheck >= 2.4 && < 2.9,
+                       QuickCheck >= 2.4 && < 2.10,
                        tasty >= 0.8 && < 0.12,
                        tasty-quickcheck >= 0.8 && < 0.9,
                        parsec >= 3,
