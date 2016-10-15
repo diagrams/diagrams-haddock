@@ -2,7 +2,6 @@
 
 module Main where
 
-import           Control.Applicative
 import           Control.Lens          (view)
 import           Data.Either           (rights)
 import           Data.List             ((\\))
