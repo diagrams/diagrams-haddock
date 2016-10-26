@@ -579,10 +579,10 @@ processHaddockDiagrams' opts quiet dataURIs cacheDir outputDir file = do
               return (msgs ++ msgs2)
   where
     go src | needsCPP src = runCpp src >>= return . runCE . parseCodeBlocks file
-           | otherwise    = runCE (parseCodeBlocks file src)
+           | otherwise    = return $ runCE (parseCodeBlocks file src)
 
     needsCPP src = case readExtensions src of
-                     Just (_, es) | find (== EnableExtension CPP) es -> True
-                     _                                               -> False
+                     Just (_, es) | EnableExtension CPP `elem` es -> True
+                     _                                            -> False
 
     runCpp s = runCpphs opts file s
