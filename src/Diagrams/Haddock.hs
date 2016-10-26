@@ -578,10 +578,11 @@ processHaddockDiagrams' opts quiet dataURIs cacheDir outputDir file = do
               when changed $ Cautiously.writeFileL file (T.encodeUtf8 . T.pack $ src')
               return (msgs ++ msgs2)
   where
-    go src =
-      case runCE (parseCodeBlocks file src) of
-        r@(Nothing, msgs) -> if any (("Parse error: #" `elem`) . lines) msgs
-                             then runCpp src >>= return . runCE . parseCodeBlocks file
-                             else return r
-        r -> return r
+    go src | needsCPP src = runCpp src >>= return . runCE . parseCodeBlocks file
+           | otherwise    = return $ runCE (parseCodeBlocks file src)
+
+    needsCPP src = case readExtensions src of
+                     Just (_, es) | EnableExtension CPP `elem` es -> True
+                     _                                            -> False
+
     runCpp s = runCpphs opts file s
