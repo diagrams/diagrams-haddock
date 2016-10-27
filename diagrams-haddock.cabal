@@ -82,7 +82,7 @@ Test-suite diagrams-haddock-tests
                        tasty >= 0.8 && < 0.12,
                        tasty-quickcheck >= 0.8 && < 0.9,
                        parsec >= 3,
-                       lens >= 3.8 && < 4.15,
+                       lens >= 3.8 && < 4.16,
                        haskell-src-exts >= 1.18 && < 1.19,
                        diagrams-haddock
   hs-source-dirs:      test
