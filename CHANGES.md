@@ -5,6 +5,7 @@
 - Fix bug in CPP handling
 - Replace `lucid-svg` with `svg-builder`
 - Allow `diagrams-svg-1.4`
+- Require `diagrams-lib-1.4`
 - Allow `haskell-src-exts-1.18`
 - Allow `diagrams-builder-0.8`
 - Allow `lens-4.15`
