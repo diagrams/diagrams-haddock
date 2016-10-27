@@ -1,4 +1,4 @@
-## [v0.4](https://github.com/diagrams/diagrams-haddock/tree/v0.4) (XXX)
+## [v0.4](https://github.com/diagrams/diagrams-haddock/tree/v0.4) (2016-10-26)
 
 - Build with `ghc-8.0`
 - Improved error message when `setup-config` can't be read
