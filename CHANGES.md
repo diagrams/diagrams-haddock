@@ -2,6 +2,7 @@
 
 - Build with `ghc-8.0`
 - Improved error message when `setup-config` can't be read
+- Fix bug in CPP handling
 - Replace `lucid-svg` with `svg-builder`
 - Allow `diagrams-svg-1.4`
 - Allow `haskell-src-exts-1.18`
