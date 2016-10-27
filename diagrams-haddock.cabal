@@ -47,7 +47,7 @@ library
                        haskell-src-exts >= 1.18 && < 1.19,
                        svg-builder >= 0.1 && < 0.2,
                        diagrams-builder >= 0.5 && < 0.9,
-                       diagrams-lib >= 0.6 && < 1.4,
+                       diagrams-lib >= 1.4 && < 1.5,
                        diagrams-svg >= 1.4 && < 1.5,
                        lens >= 3.8 && < 4.16,
                        linear >= 1.10 && < 1.21,
