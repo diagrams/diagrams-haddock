@@ -1,5 +1,5 @@
 name:                diagrams-haddock
-version:             0.4
+version:             0.4.0.1
 synopsis:            Preprocessor for embedding diagrams in Haddock documentation
 description:         diagrams-haddock is a tool for compiling embedded inline
                      diagrams code in Haddock documentation, for an
