@@ -1,3 +1,7 @@
+## [v0.4.0.1](https://github.com/diagrams/diagrams-haddock/tree/v0.4.0.1) (2016-11-28)
+
+- Allow `haskell-src-exts-1.19` and `haskell-src-exts-simple-1.19`
+
 ## [v0.4](https://github.com/diagrams/diagrams-haddock/tree/v0.4) (2016-10-26)
 
 - Build with `ghc-8.0`
