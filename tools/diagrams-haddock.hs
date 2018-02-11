@@ -77,7 +77,7 @@ diagramsHaddockOpts
   &= program "diagrams-haddock"
   &= summary (unlines
        [ "diagrams-haddock v" ++ showVersion version ++ ", (c) 2013-2016 diagrams-haddock team (see LICENSE)"
-       , "compiled using version " ++ showVersion cabalVersion ++ " of the Cabal library"
+       , "compiled using version " ++ show cabalVersion ++ " of the Cabal library"
        , ""
        , "Compile inline diagrams code in Haddock documentation."
        , ""
@@ -133,7 +133,7 @@ processCabalPackage opts dir = do
       , "Either it does not exist or it is in the wrong format."
       , "* You may need to run 'cabal configure' first."
       , "* Make sure that the version of Cabal used to compile"
-      , "  diagrams-haddock (" ++ showVersion cabalVersion ++ ") matches the version used"
+      , "  diagrams-haddock (" ++ show cabalVersion ++ ") matches the version used"
       , "  by the cabal tool."
       , "* Use the -d option if you want diagrams-haddock to look in"
       , "  a different dist directory."

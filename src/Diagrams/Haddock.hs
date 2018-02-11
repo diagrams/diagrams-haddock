@@ -18,7 +18,7 @@
 -- which was literally produced by this code:
 --
 -- > greenCircle = circle 1
--- >             # fc green # pad 1.1
+-- >             # fc purple # pad 1.1
 --
 -- For a much better example of the use of diagrams-haddock, see the
 -- diagrams-contrib package: <http://hackage.haskell.org/package/diagrams%2Dcontrib>.
@@ -75,7 +75,7 @@ module Diagrams.Haddock
 
 import           Control.Arrow               (first, (&&&), (***))
 import           Control.Lens                (makeLenses, orOf, view, (%%~),
-                                              (%~), (&), (.~), (^.), _2, _Right)
+                                              (%~), (&), (.~), (^.), _2, _Right, (^..))
 import           Control.Monad.Writer
 import qualified Data.ByteString.Base64.Lazy as BS64
 import qualified Data.ByteString.Lazy        as BS
@@ -83,7 +83,7 @@ import qualified Data.ByteString.Lazy.Char8  as BS8
 import           Data.Char                   (isSpace)
 import           Data.Either                 (lefts, rights)
 import           Data.Function               (on)
-import           Data.Generics.Uniplate.Data (universeBi)
+-- import           Data.Generics.Uniplate.Data (universeBi)
 import           Data.List                   (groupBy, intercalate, isPrefixOf,
                                               partition)
 import           Data.List.Split             (dropBlanks, dropDelims, split,
@@ -104,7 +104,7 @@ import           System.Directory            (copyFile,
 import           System.FilePath             (dropExtension, normalise,
                                               splitDirectories, (<.>), (</>))
 import qualified System.IO                   as IO
-import qualified System.IO.Cautious          as Cautiously
+-- import qualified System.IO.Cautious          as Cautiously
 import qualified System.IO.Strict            as Strict
 import           Text.Parsec
 import qualified Text.Parsec                 as P
@@ -112,8 +112,15 @@ import           Text.Parsec.String
 
 import           Diagrams.Backend.SVG        (Options (..), SVG (..))
 import qualified Diagrams.Builder            as DB
-import           Diagrams.Prelude            (V2, zero)
-import           Diagrams.TwoD.Size          (mkSizeSpec2D)
+import           Diagrams.Prelude            (V2, zero, Diagram)
+import           Geometry.TwoD.Size          (mkSizeSpec2D)
+
+import Diagrams.Builder.Opts
+import Diagrams.Backend
+import Data.Data.Lens (template)
+
+import           Control.Monad.Catch (catchAll)
+
 
 ------------------------------------------------------------
 -- Utilities
@@ -339,7 +346,7 @@ getQName _          = Nothing
 collectIdents :: Module SrcSpanInfo -> S.Set String
 collectIdents m = S.fromList . catMaybes $
                     [ getQName n
-                    | (Var _ n :: Exp SrcSpanInfo) <- universeBi m
+                    | (Var _ n :: Exp SrcSpanInfo) <- m ^.. template -- universeBi m
                     ]
 
 -- | From a @String@ representing a comment (along with its beginning
@@ -450,6 +457,7 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
 
           errHeader = file ++ ": " ++ (url ^. diagramName) ++ ":\n"
 
+      let opts = SVGOptions (round <$> mkSizeSpec2D w h) Nothing "" [] False
       res <- liftIO $ do
         createDirectoryIfMissing True cacheDir
         when (not dataURIs) $ createDirectoryIfMissing True outputDir
@@ -457,27 +465,40 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
         logStr $ "[ ] " ++ (url ^. diagramName)
         IO.hFlush IO.stdout
 
-        let
-                     bopts :: DB.BuildOpts SVG V2 Double
-                     bopts = DB.mkBuildOpts SVG zero (SVGOptions (mkSizeSpec2D w h) Nothing "" [] False)
-                      & DB.snippets .~ map (view codeBlockCode) neededCode
-                      & DB.imports  .~ [ "Diagrams.Backend.SVG" ]
-                      & DB.diaExpr  .~ (url ^. diagramName)
-                      & DB.decideRegen .~ (DB.hashedRegenerate (\_ opts -> opts) cacheDir)
-        DB.buildDiagram bopts
+        let bopts :: BuildOpts (Diagram V2)
+            -- bopts = DB.mkBuildOpts SVG zero (SVGOptions (mkSizeSpec2D w h) Nothing "" [] False)
+            -- bopts = DB.diaBuildOpts (SVGOptions (round <$> mkSizeSpec2D w h) Nothing "" [] False)
+            bopts = DB.diaBuildOpts opts
+                      & hashCache .~ Just (123, ".diagrams-cache")
+                      & buildExpr .~ url ^. diagramName
+
+            snip = Snippet
+              { _snippets = map (view codeBlockCode) neededCode
+              , _pragmas = ["FlexibleContexts", "GADTs", "TypeFamilies"]
+              , _imports = [ "Diagrams.Backend.SVG", "Diagrams.Prelude", "Geometry" ]
+              , _qimports = []
+              }
+
+             -- & DB.snippets .~ map (view codeBlockCode) neededCode
+             -- & DB.imports  .~ [ "Diagrams.Backend.SVG" ]
+             -- & DB.diaExpr  .~ (url ^. diagramName)
+             -- & DB.decideRegen .~ (DB.hashedRegenerate (\_ opts -> opts) cacheDir)
+        -- DB.buildDiagram snip bopts
+
+        DB.buildResult snip bopts
 
       case res of
         -- XXX incorporate these into error reporting framework instead of printing
-        DB.ParseErr err    -> do
+        DB.ParseError err    -> do
           tell [errHeader ++ "Parse error: " ++ err]
           logResult "!"
           return oldURL
-        DB.InterpErr ierr  -> do
+        DB.InterpError ierr  -> do
           tell [errHeader ++ "Interpreter error: " ++ DB.ppInterpError ierr]
           logResult "!"
           return oldURL
         DB.Skipped hash    -> do
-          let cached = mkCached (DB.hashToHexStr hash)
+          let cached = mkCached (DB.showHash hash)
           when (not dataURIs) $ liftIO $ copyFile cached outFile
           logResult "."
           if dataURIs
@@ -485,15 +506,17 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
               svgBS <- liftIO $ BS.readFile cached
               return (newURL (mkDataURI svgBS))
             else return (newURL outFile)
-        DB.OK hash svg     -> do
-          let cached = mkCached (DB.hashToHexStr hash)
-              svgBS  = G.renderBS svg
+        DB.OK hash d     -> do
+          let cached = mkCached (DB.showHash hash)
+              svgBS  = G.renderBS $ fst $ renderDiaT opts d
+          liftIO $ IO.hFlush IO.stdout
           liftIO $ BS.writeFile cached svgBS
           url' <- if dataURIs
                     then return (newURL (mkDataURI svgBS))
                     else liftIO (copyFile cached outFile >> return (newURL outFile))
           logResult "X"
           return url'
+          -- return (newURL outFile)
 
  where
    mkCached base = cacheDir </> base <.> "svg"
@@ -575,7 +598,8 @@ processHaddockDiagrams' opts quiet dataURIs cacheDir outputDir file = do
               -- Cautiously.writeFile truncates chars to 8 bits.  So
               -- we do the encoding to UTF-8 ourselves and then call
               -- writeFileL.
-              when changed $ Cautiously.writeFileL file (T.encodeUtf8 . T.pack $ src')
+              -- when changed $ Cautiously.writeFileL file (T.encodeUtf8 . T.pack $ src')
+              when changed $ writeFile file src'
               return (msgs ++ msgs2)
   where
     go src | needsCPP src = runCpp src >>= return . runCE . parseCodeBlocks file
