@@ -2,26 +2,21 @@ language: haskell
 
 env:
   matrix:
-    - GHCVER=7.10.2 CABALVER=1.22
-    - GHCVER=8.0.1 CABALVER=1.24
+    - GHCVER=7.10.3 CABALVER=1.22
+    - GHCVER=8.0.2 CABALVER=1.24
+    - GHCVER=8.2.2 CABALVER=2.0
+    - GHCVER=8.4.2 CABALVER=2.2
     - GHCVER=head CABALVER=head
   global:
-    - UBUNTU_PKGS="libgtk-3-dev libcairo2-dev"
+    - UBUNTU_PKGS="libgmp-dev libgtk2.0-dev libcairo2-dev libpango1.0-dev"
     - EXTRA_DEPS_PRE="gtk2hs-buildtools"
     - HEAD_DEPS="active dual-tree monoid-extras diagrams-core diagrams-solve diagrams-lib  statestack diagrams-cairo diagrams-svg diagrams-postscript diagrams-rasterific diagrams-builder"
-
 
 matrix:
   allow_failures:
     - env: GHCVER=head CABALVER=head
 
 before_install:
-  - |
-    if [ $GHCVER = "7.10.1" ]; then
-      echo "constraints:transformers installed, ghc installed" >> cabal.config
-    else
-      echo "constraints:ghc installed" >> cabal.config
-    fi
   - git clone http://github.com/diagrams/diagrams-travis travis
   - source travis/scripts/set_env.sh
   - ./travis/scripts/before_install.sh
