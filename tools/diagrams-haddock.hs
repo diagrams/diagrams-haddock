@@ -1,10 +1,10 @@
+{-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TupleSections      #-}
 module Main where
 
 import           Control.Monad                      (forM_, when)
 import           Data.List                          (intercalate)
-import           Data.Version                       (showVersion)
 import           Diagrams.Haddock
 import           System.Console.CmdArgs
 import           System.Directory
@@ -20,6 +20,22 @@ import           Distribution.Simple.Utils          (cabalVersion)
 import           Language.Preprocessor.Cpphs
 
 import           Paths_diagrams_haddock             (version)
+
+import           Data.Version                       (showVersion)
+
+#if MIN_VERSION_Cabal(2,0,0)
+import           Distribution.Pretty                (prettyShow)
+import           Distribution.Types.Version         (Version)
+#else
+import           Data.Version                       (Version)
+#endif
+
+showCabalVersion :: Version -> String
+#if MIN_VERSION_Cabal(2,0,0)
+showCabalVersion = prettyShow
+#else
+showCabalVersion = showVersion
+#endif
 
 data DiagramsHaddock
   = DiagramsHaddock
@@ -77,7 +93,7 @@ diagramsHaddockOpts
   &= program "diagrams-haddock"
   &= summary (unlines
        [ "diagrams-haddock v" ++ showVersion version ++ ", (c) 2013-2016 diagrams-haddock team (see LICENSE)"
-       , "compiled using version " ++ showVersion cabalVersion ++ " of the Cabal library"
+       , "compiled using version " ++ showCabalVersion cabalVersion ++ " of the Cabal library"
        , ""
        , "Compile inline diagrams code in Haddock documentation."
        , ""
@@ -133,7 +149,7 @@ processCabalPackage opts dir = do
       , "Either it does not exist or it is in the wrong format."
       , "* You may need to run 'cabal configure' first."
       , "* Make sure that the version of Cabal used to compile"
-      , "  diagrams-haddock (" ++ showVersion cabalVersion ++ ") matches the version used"
+      , "  diagrams-haddock (" ++ showCabalVersion cabalVersion ++ ") matches the version used"
       , "  by the cabal tool."
       , "* Use the -d option if you want diagrams-haddock to look in"
       , "  a different dist directory."
