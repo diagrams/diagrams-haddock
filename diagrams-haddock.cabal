@@ -63,6 +63,7 @@ library
 
 Executable diagrams-haddock
   main-is:             diagrams-haddock.hs
+  other-modules:       Paths_diagrams_haddock
   build-depends:       base,
                        directory,
                        filepath,
