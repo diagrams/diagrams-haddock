@@ -21,21 +21,49 @@ import           Language.Preprocessor.Cpphs
 
 import           Paths_diagrams_haddock             (version)
 
-import           Data.Version                       (showVersion)
+------------------------------------------------------------
+-- This is officially an awful mess.
+--
+-- In Cabal < 2.0, it used the Version type from Data.Version.
+--
+-- As of Cabal 2.0, Cabal switched to its own Version type,
+-- and re-exported a 'showVersion' function.
+--
+-- As of Cabal 2.2, showVersion became deprecated and a 'prettyShow'
+-- function was added.
+--
+-- We need to show both Cabal versions and Data.Version
+-- versions, hence the CPP mess below.
 
+-- 1. We definitely need Data.Version. Import it qualified.
+import qualified Data.Version                       as V
+
+-- 2. Import the proper 'Version' type to refer to Cabal versions.
 #if MIN_VERSION_Cabal(2,0,0)
-import           Distribution.Pretty                (prettyShow)
 import           Distribution.Types.Version         (Version)
 #else
 import           Data.Version                       (Version)
 #endif
 
-showCabalVersion :: Version -> String
-#if MIN_VERSION_Cabal(2,0,0)
-showCabalVersion = prettyShow
-#else
-showCabalVersion = showVersion
+-- 3. Import the proper function for showing Cabal versions.
+#if   MIN_VERSION_Cabal(2,2,0)
+import           Distribution.Pretty                (prettyShow)
+#elif MIN_VERSION_Cabal(2,0,0)
+import qualified Distribution.Types.Version         as DV
 #endif
+
+-- 4. Define a function for showing Cabal versions.
+showCabalVersion :: Version -> String
+#if   MIN_VERSION_Cabal(2,2,0)
+showCabalVersion = prettyShow
+#elif MIN_VERSION_Cabal(2,0,0)
+showCabalVersion = DV.showVersion
+#else
+showCabalVersion = V.showVersion
+#endif
+
+------------------------------------------------------------
+------------------------------------------------------------
 
 data DiagramsHaddock
   = DiagramsHaddock
@@ -92,7 +120,7 @@ diagramsHaddockOpts
   }
   &= program "diagrams-haddock"
   &= summary (unlines
-       [ "diagrams-haddock v" ++ showVersion version ++ ", (c) 2013-2016 diagrams-haddock team (see LICENSE)"
+       [ "diagrams-haddock v" ++ V.showVersion version ++ ", (c) 2013-2016 diagrams-haddock team (see LICENSE)"
        , "compiled using version " ++ showCabalVersion cabalVersion ++ " of the Cabal library"
        , ""
        , "Compile inline diagrams code in Haddock documentation."
