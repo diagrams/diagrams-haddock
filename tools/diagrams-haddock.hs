@@ -26,11 +26,11 @@ import           Paths_diagrams_haddock             (version)
 --
 -- In Cabal < 2.0, it used the Version type from Data.Version.
 --
--- As of Cabal 2.0, Cabal switched to its own Version type,
--- and re-exported a 'showVersion' function.
+-- As of Cabal 2.0, Cabal switched to its own Version type in
+-- Distribution.Version, and re-exported a 'showVersion' function.
 --
 -- As of Cabal 2.2, showVersion became deprecated and a 'prettyShow'
--- function was added.
+-- function was added;  Version moved to Distribution.Types.Version.
 --
 -- We need to show both Cabal versions and Data.Version
 -- versions, hence the CPP mess below.
@@ -38,21 +38,19 @@ import           Paths_diagrams_haddock             (version)
 -- 1. We definitely need Data.Version. Import it qualified.
 import qualified Data.Version                       as V
 
--- 2. Import the proper 'Version' type to refer to Cabal versions.
-#if MIN_VERSION_Cabal(2,0,0)
+-- 2. Import the proper 'Version' type to refer to Cabal versions, and
+-- the proper function for showing it.
+#if MIN_VERSION_Cabal(2,2,0)
 import           Distribution.Types.Version         (Version)
+import           Distribution.Pretty                (prettyShow)
+#elif MIN_VERSION_Cabal(2,0,0)
+import           Distribution.Version               (Version)
+import qualified Distribution.Version               as DV
 #else
 import           Data.Version                       (Version)
 #endif
 
--- 3. Import the proper function for showing Cabal versions.
-#if   MIN_VERSION_Cabal(2,2,0)
-import           Distribution.Pretty                (prettyShow)
-#elif MIN_VERSION_Cabal(2,0,0)
-import qualified Distribution.Types.Version         as DV
-#endif
-
--- 4. Define a function for showing Cabal versions.
+-- 3. Define a function for showing Cabal versions.
 showCabalVersion :: Version -> String
 #if   MIN_VERSION_Cabal(2,2,0)
 showCabalVersion = prettyShow
