@@ -1,3 +1,12 @@
+## [v0.4.0.2](https://github.com/diagrams/diagrams-haddock/tree/v0.4.0.2) (2018-06-25)
+
+A bunch of upper bound updates etc.:
+
+- Allow `lens-4.16`, `Cabal-2.2` `QuickCheck-2.11`,
+  `haskell-src-exts-1.20`, `tasty-1.1`, `tasty-quickcheck-0.10`,
+  `ansi-terminal-0.8`
+- Updates to work with several different versions of `Cabal`
+
 ## [v0.4.0.1](https://github.com/diagrams/diagrams-haddock/tree/v0.4.0.1) (2016-11-28)
 
 - Allow `haskell-src-exts-1.19` and `haskell-src-exts-simple-1.19`
