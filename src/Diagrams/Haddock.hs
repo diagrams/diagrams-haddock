@@ -6,7 +6,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Haddock
--- Copyright   :  (c) 2013 diagrams-haddock team (see LICENSE)
+-- Copyright   :  (c) 2013-2018 diagrams team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -75,7 +75,8 @@ module Diagrams.Haddock
 
 import           Control.Arrow               (first, (&&&), (***))
 import           Control.Lens                (makeLenses, orOf, view, (%%~),
-                                              (%~), (&), (.~), (^.), _2, _Right, (^..))
+                                              (%~), (&), (.~), (^.), (^..), _2,
+                                              _3, _Right)
 import           Control.Monad.Writer
 import qualified Data.ByteString.Base64.Lazy as BS64
 import qualified Data.ByteString.Lazy        as BS
@@ -112,14 +113,14 @@ import           Text.Parsec.String
 
 import           Diagrams.Backend.SVG        (Options (..), SVG (..))
 import qualified Diagrams.Builder            as DB
-import           Diagrams.Prelude            (V2, zero, Diagram)
+import           Diagrams.Prelude            (Diagram, V2, zero)
 import           Geometry.TwoD.Size          (mkSizeSpec2D)
 
-import Diagrams.Builder.Opts
-import Diagrams.Backend
-import Data.Data.Lens (template)
+import           Data.Data.Lens              (template)
+import           Diagrams.Backend
+import           Diagrams.Builder.Opts
 
-import           Control.Monad.Catch (catchAll)
+import           Control.Monad.Catch         (catchAll)
 
 
 ------------------------------------------------------------
@@ -508,7 +509,7 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
             else return (newURL outFile)
         DB.OK hash d     -> do
           let cached = mkCached (DB.showHash hash)
-              svgBS  = G.renderBS $ fst $ renderDiaT opts d
+              svgBS  = G.renderBS $ view _3 $ renderDiaT opts d
           liftIO $ IO.hFlush IO.stdout
           liftIO $ BS.writeFile cached svgBS
           url' <- if dataURIs
