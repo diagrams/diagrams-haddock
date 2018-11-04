@@ -76,7 +76,7 @@ module Diagrams.Haddock
 import           Control.Arrow               (first, (&&&), (***))
 import           Control.Lens                (makeLenses, orOf, view, (%%~),
                                               (%~), (&), (.~), (^.), (^..), _2,
-                                              _3, _Right)
+                                              _3, _Right, _Show, ix, (^?))
 import           Control.Monad.Writer
 import qualified Data.ByteString.Base64.Lazy as BS64
 import qualified Data.ByteString.Lazy        as BS
@@ -448,8 +448,8 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
           munge   = intercalate "_" . splitDirectories . normalise . dropExtension
 
           w, h :: Maybe Double
-          w = read <$> M.lookup "width" (url ^. diagramOpts)
-          h = read <$> M.lookup "height" (url ^. diagramOpts)
+          w = url ^? diagramOpts. ix "width" . _Show
+          h = url ^? diagramOpts. ix "height" . _Show
 
           oldURL = (url, False)
           newURL content = (url & diagramURL .~ content, content /= url^.diagramURL)
@@ -466,58 +466,36 @@ compileDiagram quiet dataURIs cacheDir outputDir file ds code url
         logStr $ "[ ] " ++ (url ^. diagramName)
         IO.hFlush IO.stdout
 
-        let bopts :: BuildOpts (Diagram V2)
-            -- bopts = DB.mkBuildOpts SVG zero (SVGOptions (mkSizeSpec2D w h) Nothing "" [] False)
-            -- bopts = DB.diaBuildOpts (SVGOptions (round <$> mkSizeSpec2D w h) Nothing "" [] False)
-            bopts = DB.diaBuildOpts opts
-                      & hashCache .~ Just (123, ".diagrams-cache")
-                      & buildExpr .~ url ^. diagramName
-
-            snip = Snippet
+        let snip = Snippets
               { _snippets = map (view codeBlockCode) neededCode
-              , _pragmas = ["FlexibleContexts", "GADTs", "TypeFamilies"]
-              , _imports = [ "Diagrams.Backend.SVG", "Diagrams.Prelude", "Geometry" ]
+              , _pragmas  = ["FlexibleContexts", "GADTs", "TypeFamilies"]
+              , _imports  = [ "Diagrams.Prelude", "Geometry" ]
               , _qimports = []
               }
+            svgBuilder = DB.DiagramBuilder
+              { DB._diaInfo    = svgInfo
+              , DB._diaExpr   = url ^. diagramName
+              , DB._diaOutSize = round <$> mkSizeSpec2D w h
+              }
+            i = DB.diaSnippet snip svgBuilder
+         in pure i
 
-             -- & DB.snippets .~ map (view codeBlockCode) neededCode
-             -- & DB.imports  .~ [ "Diagrams.Backend.SVG" ]
-             -- & DB.diaExpr  .~ (url ^. diagramName)
-             -- & DB.decideRegen .~ (DB.hashedRegenerate (\_ opts -> opts) cacheDir)
-        -- DB.buildDiagram snip bopts
-
-        DB.buildResult snip bopts
-
-      case res of
-        -- XXX incorporate these into error reporting framework instead of printing
-        DB.ParseError err    -> do
+      success <- case res of
+        Left err -> do
           tell [errHeader ++ "Parse error: " ++ err]
           logResult "!"
-          return oldURL
-        DB.InterpError ierr  -> do
-          tell [errHeader ++ "Interpreter error: " ++ DB.ppInterpError ierr]
-          logResult "!"
-          return oldURL
-        DB.Skipped hash    -> do
-          let cached = mkCached (DB.showHash hash)
-          when (not dataURIs) $ liftIO $ copyFile cached outFile
-          logResult "."
-          if dataURIs
-            then do
-              svgBS <- liftIO $ BS.readFile cached
-              return (newURL (mkDataURI svgBS))
-            else return (newURL outFile)
-        DB.OK hash d     -> do
-          let cached = mkCached (DB.showHash hash)
-              svgBS  = G.renderBS $ view _3 $ renderDiaT opts d
-          liftIO $ IO.hFlush IO.stdout
-          liftIO $ BS.writeFile cached svgBS
-          url' <- if dataURIs
-                    then return (newURL (mkDataURI svgBS))
-                    else liftIO (copyFile cached outFile >> return (newURL outFile))
-          logResult "X"
-          return url'
-          -- return (newURL outFile)
+          pure False
+        Right res -> do
+          a <- liftIO $ DB.cacheRun ".diagrams-cache" res outFile
+          case a of
+            Left ierr -> do
+              tell [errHeader ++ "Interpreter error: " ++ DB.ppInterpError ierr]
+              logResult "!"
+              pure False
+            Right b -> logResult "X" >> pure b
+
+      -- XXX deal with mkDataURI case!!!
+      pure $ if success then (newURL outFile) else oldURL
 
  where
    mkCached base = cacheDir </> base <.> "svg"
