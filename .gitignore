@@ -1,4 +1,5 @@
 dist
+dist-newstyle
 cabal-dev
 *.o
 *.hi
@@ -6,11 +7,13 @@ cabal-dev
 *.chs.h
 .virthualenv
 *~
-dist_*
-dist-*
 .hsenv_*
-.hsenv*
+dist_*
+history
 TAGS
-.diagrams-cache
-.cabal-sandbox
+cabal.project.local
+.cabal-sandbox/
 cabal.sandbox.config
+.stack-work/
+codex.tags
+.ghc.environment.*
