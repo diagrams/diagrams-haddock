@@ -1,3 +1,10 @@
+## [v0.4.0.3](https://github.com/diagrams/diagrams-haddock/tree/v0.4.0.3) (2019-02-09)
+
+More upper bound updates:
+
+- Allow `base-4.12`, `containers-0.6`, `lens-4.17`, `Cabal-2.4`,
+    `QuickCheck-2.12`, `tasty-1.2`
+
 ## [v0.4.0.2](https://github.com/diagrams/diagrams-haddock/tree/v0.4.0.2) (2018-06-25)
 
 A bunch of upper bound updates etc.:
