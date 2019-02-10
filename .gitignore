@@ -14,3 +14,6 @@ TAGS
 .diagrams-cache
 .cabal-sandbox
 cabal.sandbox.config
+
+.ghc.environment.*
+.stack-work
