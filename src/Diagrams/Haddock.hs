@@ -104,11 +104,11 @@ import           System.Directory            (copyFile,
 import           System.FilePath             (dropExtension, normalise,
                                               splitDirectories, (<.>), (</>))
 import qualified System.IO                   as IO
-import qualified System.IO.Cautious          as Cautiously
 import qualified System.IO.Strict            as Strict
 import           Text.Parsec
 import qualified Text.Parsec                 as P
 import           Text.Parsec.String
+import qualified UnliftIO.IO.File            as UIO
 
 import           Diagrams.Backend.SVG        (Options (..), SVG (..))
 import qualified Diagrams.Builder            as DB
@@ -571,11 +571,7 @@ processHaddockDiagrams' opts quiet dataURIs cacheDir outputDir file = do
                 compileDiagrams quiet dataURIs cacheDir outputDir file ds cs urls
               let src' = displayDiagramURLs urls'
 
-              -- See https://github.com/diagrams/diagrams-haddock/issues/8:
-              -- Cautiously.writeFile truncates chars to 8 bits.  So
-              -- we do the encoding to UTF-8 ourselves and then call
-              -- writeFileL.
-              when changed $ Cautiously.writeFileL file (T.encodeUtf8 . T.pack $ src')
+              when changed $ UIO.writeBinaryFileDurableAtomic file (T.encodeUtf8 . T.pack $ src')
               return (msgs ++ msgs2)
   where
     go src | needsCPP src = runCpp src >>= return . runCE . parseCodeBlocks file
