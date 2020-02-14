@@ -323,17 +323,17 @@ collectBindings _ = S.empty
 getBinding :: Decl l -> Maybe String
 getBinding (FunBind _ [])                     = Nothing
 getBinding (FunBind _ (Match _ nm _ _ _ : _)) = Just $ getName nm
-getBinding (PatBind _ (PVar _ nm) _ _)      = Just $ getName nm
+getBinding (PatBind _ (PVar _ nm) _ _)        = Just $ getName nm
 getBinding _                                  = Nothing
 
 getName :: Name l -> String
-getName (HSE.Ident _ s)  = s
-getName (Symbol _ s) = s
+getName (HSE.Ident _ s) = s
+getName (Symbol _ s)    = s
 
 getQName :: QName l -> Maybe String
 getQName (Qual _ _ n) = Just $ getName n
 getQName (UnQual _ n) = Just $ getName n
-getQName _          = Nothing
+getQName _            = Nothing
 
 -- | Collect the list of referenced identifiers in a module.
 collectIdents :: Module SrcSpanInfo -> S.Set String
