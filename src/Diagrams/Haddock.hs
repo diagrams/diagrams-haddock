@@ -91,8 +91,8 @@ import           Data.List.Split             (dropBlanks, dropDelims, split,
 import qualified Data.Map                    as M
 import           Data.Maybe                  (catMaybes, mapMaybe)
 import qualified Data.Set                    as S
-import qualified Data.Text.Lazy              as T
-import qualified Data.Text.Lazy.Encoding     as T
+import qualified Data.Text                   as T
+import qualified Data.Text.Encoding          as T
 import qualified Graphics.Svg                as G
 import           Language.Haskell.Exts       hiding (loc)
 import qualified Language.Haskell.Exts       as HSE
