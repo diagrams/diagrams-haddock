@@ -1,3 +1,10 @@
+## [v0.4.1](https://github.com/diagrams/diagrams-haddock/tree/v0.4.1) (2021-08-12)
+
+- Allow `base-4.15`, `bytestring-0.11`, `strict-0.4`, `lens-5.0`,
+  `base64-bytestring-1.2`, `ansi-terminal-0.11`, `Cabal-3.4`,
+  `QuickCheck-2.14`, `tasty-1.4`
+- Switch from `cautious-file` to `unliftio` package for safe file writing.
+
 ## [v0.4.0.3](https://github.com/diagrams/diagrams-haddock/tree/v0.4.0.3) (2019-02-09)
 
 More upper bound updates:
