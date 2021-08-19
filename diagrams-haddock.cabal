@@ -15,7 +15,7 @@ description:         diagrams-haddock is a tool for compiling embedded inline
                      diagrams-haddock, see the diagrams-contrib
                      package
                      (<http://hackage.haskell.org/package/diagrams%2Dcontrib>).
-homepage:            http://projects.haskell.org/diagrams/
+homepage:            https://diagrams.github.io/
 license:             BSD3
 license-file:        LICENSE
 author:              Brent Yorgey
