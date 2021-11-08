@@ -17,6 +17,10 @@ import           Distribution.Simple.Configure      (maybeGetPersistBuildConfig)
 import           Distribution.Simple.LocalBuildInfo (localPkgDescr)
 import           Distribution.Simple.Utils          (cabalVersion)
 
+#if MIN_VERSION_Cabal(3,6,0)
+import           Distribution.Utils.Path            (getSymbolicPath)
+#endif
+
 import           Language.Preprocessor.Cpphs
 
 import           Paths_diagrams_haddock             (version)
@@ -151,7 +155,11 @@ processCabalPackage opts dir = do
         Nothing -> return ()
         Just lib -> do
           let buildInfo = P.libBuildInfo lib
+#if MIN_VERSION_Cabal(3,6,0)
+              srcDirs   = map getSymbolicPath (P.hsSourceDirs buildInfo)
+#else
               srcDirs   = P.hsSourceDirs buildInfo
+#endif
               incls     = P.includeDirs buildInfo
               defns     = P.cppOptions buildInfo
               opts' = opts
