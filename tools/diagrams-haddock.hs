@@ -21,44 +21,9 @@ import           Language.Preprocessor.Cpphs
 
 import           Paths_diagrams_haddock             (version)
 
-------------------------------------------------------------
--- This is officially an awful mess.
---
--- In Cabal < 2.0, it used the Version type from Data.Version.
---
--- As of Cabal 2.0, Cabal switched to its own Version type in
--- Distribution.Version, and re-exported a 'showVersion' function.
---
--- As of Cabal 2.2, showVersion became deprecated and a 'prettyShow'
--- function was added;  Version moved to Distribution.Types.Version.
---
--- We need to show both Cabal versions and Data.Version
--- versions, hence the CPP mess below.
-
--- 1. We definitely need Data.Version. Import it qualified.
 import qualified Data.Version                       as V
-
--- 2. Import the proper 'Version' type to refer to Cabal versions, and
--- the proper function for showing it.
-#if MIN_VERSION_Cabal(2,2,0)
 import           Distribution.Types.Version         (Version)
 import           Distribution.Pretty                (prettyShow)
-#elif MIN_VERSION_Cabal(2,0,0)
-import           Distribution.Version               (Version)
-import qualified Distribution.Version               as DV
-#else
-import           Data.Version                       (Version)
-#endif
-
--- 3. Define a function for showing Cabal versions.
-showCabalVersion :: Version -> String
-#if   MIN_VERSION_Cabal(2,2,0)
-showCabalVersion = prettyShow
-#elif MIN_VERSION_Cabal(2,0,0)
-showCabalVersion = DV.showVersion
-#else
-showCabalVersion = V.showVersion
-#endif
 
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -119,7 +84,7 @@ diagramsHaddockOpts
   &= program "diagrams-haddock"
   &= summary (unlines
        [ "diagrams-haddock v" ++ V.showVersion version ++ ", (c) 2013-2016 diagrams-haddock team (see LICENSE)"
-       , "compiled using version " ++ showCabalVersion cabalVersion ++ " of the Cabal library"
+       , "compiled using version " ++ prettyShow cabalVersion ++ " of the Cabal library"
        , ""
        , "Compile inline diagrams code in Haddock documentation."
        , ""
@@ -175,7 +140,7 @@ processCabalPackage opts dir = do
       , "Either it does not exist or it is in the wrong format."
       , "* You may need to run 'cabal configure' first."
       , "* Make sure that the version of Cabal used to compile"
-      , "  diagrams-haddock (" ++ showCabalVersion cabalVersion ++ ") matches the version used"
+      , "  diagrams-haddock (" ++ prettyShow cabalVersion ++ ") matches the version used"
       , "  by the cabal tool."
       , "* Use the -d option if you want diagrams-haddock to look in"
       , "  a different dist directory."
@@ -193,12 +158,10 @@ processCabalPackage opts dir = do
                     { includeDirs = includeDirs opts ++ incls
                     }
               cabalDefines = parseCabalDefines defns
-          mapM_ (tryProcessFile opts' cabalDefines dir srcDirs) . map toFilePath . P.exposedModules $ lib
+          mapM_ (tryProcessFile opts' cabalDefines dir srcDirs . toFilePath) . P.exposedModules $ lib
 
 getHsenv :: IO (Maybe String)
-getHsenv = do
-  env <- getEnvironment
-  return $ lookup "HSENV_NAME" env
+getHsenv = lookup "HSENV_NAME" <$> getEnvironment
 
 -- | Use @cpphs@'s options parser to handle the options from cabal.
 parseCabalDefines :: [String] -> [(String,String)]
