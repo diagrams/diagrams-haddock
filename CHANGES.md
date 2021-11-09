@@ -1,3 +1,7 @@
+## [v0.4.1.1](https://github.com/diagrams/diagrams-haddock/tree/v0.4.1.1) (2021-11-09)
+
+- Allow `Cabal-3.6`
+
 ## [v0.4.1](https://github.com/diagrams/diagrams-haddock/tree/v0.4.1) (2021-08-12)
 
 - Allow `base-4.15`, `bytestring-0.11`, `strict-0.4`, `lens-5.0`,
