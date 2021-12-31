@@ -1,6 +1,9 @@
+
 ## [v0.4.1.1](https://github.com/diagrams/diagrams-haddock/tree/v0.4.1.1) (2021-11-09)
 
 - Allow `Cabal-3.6`
+
+- r1: allow `base-4.16` and `lens-5.1`; test with GHC 9.2
 
 ## [v0.4.1](https://github.com/diagrams/diagrams-haddock/tree/v0.4.1) (2021-08-12)
 
