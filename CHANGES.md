@@ -1,3 +1,16 @@
+## [v0.4.1.2](https://github.com/diagrams/diagrams-haddock/tree/v0.4.1.2) (2023-07-10)
+
+- Update upper bounds to allow:
+    - `base-4.17` and `base-4.18`
+    - `mtl-2.3`
+    - `bytestring-0.12`
+    - `strict-0.5`
+    - `lens-5.2`
+    - `linear-1.22`
+    - `text-2.0`
+    - `ansi-terminal-1.0`
+    - `Cabal-3.10`
+- Test on GHC 9.4 and 9.6
 
 ## [v0.4.1.1](https://github.com/diagrams/diagrams-haddock/tree/v0.4.1.1) (2021-11-09)
 
