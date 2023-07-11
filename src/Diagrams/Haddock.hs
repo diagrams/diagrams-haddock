@@ -76,6 +76,7 @@ module Diagrams.Haddock
 import           Control.Arrow               (first, (&&&), (***))
 import           Control.Lens                (makeLenses, orOf, view, (%%~),
                                               (%~), (&), (.~), (^.), _2, _Right)
+import           Control.Monad               (when)
 import           Control.Monad.Writer
 import qualified Data.ByteString.Base64.Lazy as BS64
 import qualified Data.ByteString.Lazy        as BS
