@@ -36,14 +36,14 @@ library
   exposed-modules:     Diagrams.Haddock
   other-modules:       Paths_diagrams_haddock
   build-depends:       base >= 4.4 && < 4.19,
-                       filepath,
-                       directory,
+                       filepath >= 1.4 && < 1.5,
+                       directory >= 1.3 && < 1.4,
                        mtl >= 2.0 && < 2.4,
                        containers >= 0.4 && < 0.7,
                        split >= 0.2 && < 0.3,
                        bytestring >= 0.9 && < 0.13,
                        strict >= 0.3 && < 0.6,
-                       parsec >= 3,
+                       parsec >= 3 && < 3.2,
                        haskell-src-exts >= 1.18 && < 1.24,
                        svg-builder >= 0.1 && < 0.2,
                        diagrams-builder >= 0.5 && < 0.9,
@@ -51,7 +51,7 @@ library
                        diagrams-svg >= 1.4 && < 1.5,
                        lens >= 3.8 && < 5.3,
                        linear >= 1.10 && < 1.23,
-                       cpphs >= 1.15,
+                       cpphs >= 1.15 && < 1.21,
                        unliftio >= 0.2.12 && < 0.3,
                        uniplate >= 1.6 && < 1.7,
                        text >= 0.11 && < 2.1,
@@ -64,9 +64,9 @@ library
 Executable diagrams-haddock
   main-is:             diagrams-haddock.hs
   other-modules:       Paths_diagrams_haddock
-  build-depends:       base,
-                       directory,
-                       filepath,
+  build-depends:       base >= 4.4 && < 4.19,
+                       directory >= 1.3 && < 1.4,
+                       filepath >= 1.4 && < 1.5,
                        diagrams-haddock,
                        cmdargs >= 0.8 && < 0.11,
                        Cabal >= 2.2 && < 3.11,
@@ -82,7 +82,7 @@ Test-suite diagrams-haddock-tests
                        QuickCheck >= 2.4 && < 2.15,
                        tasty >= 0.8 && < 1.5,
                        tasty-quickcheck >= 0.8 && < 0.11,
-                       parsec >= 3,
+                       parsec >= 3 && < 3.2,
                        lens >= 3.8 && < 5.3,
                        haskell-src-exts >= 1.18 && < 1.24,
                        diagrams-haddock
