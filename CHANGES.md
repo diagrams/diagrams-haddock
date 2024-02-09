@@ -12,6 +12,8 @@
     - `Cabal-3.10`
 - Test on GHC 9.4 and 9.6
 
+- r1 (9 Feb 2024): allow `base-4.19`, `text-2.1`, `tasty-1.5` and test on GHC 9.8
+
 ## [v0.4.1.1](https://github.com/diagrams/diagrams-haddock/tree/v0.4.1.1) (2021-11-09)
 
 - Allow `Cabal-3.6`
