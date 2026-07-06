@@ -77,6 +77,7 @@ import           Control.Arrow               (first, (&&&), (***))
 import           Control.Lens                (makeLenses, orOf, view, (%%~),
                                               (%~), (&), (.~), (^.), (^..), _2,
                                               _3, _Right, _Show, ix, (^?))
+import           Control.Monad               (when)
 import           Control.Monad.Writer
 import qualified Data.ByteString.Base64.Lazy as BS64
 import qualified Data.ByteString.Lazy        as BS

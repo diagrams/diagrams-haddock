@@ -16,6 +16,7 @@ import qualified Distribution.PackageDescription    as P
 import           Distribution.Simple.Configure      (maybeGetPersistBuildConfig)
 import           Distribution.Simple.LocalBuildInfo (localPkgDescr)
 import           Distribution.Simple.Utils          (cabalVersion)
+import           Distribution.Utils.Path            (getSymbolicPath)
 
 import           Language.Preprocessor.Cpphs
 
@@ -144,7 +145,7 @@ processCabalPackage opts dir = do
         Nothing -> return ()
         Just lib -> do
           let buildInfo = P.libBuildInfo lib
-              srcDirs   = P.hsSourceDirs buildInfo
+              srcDirs   = map getSymbolicPath (P.hsSourceDirs buildInfo)
               incls     = P.includeDirs buildInfo
               defns     = P.cppOptions buildInfo
               opts' = opts
