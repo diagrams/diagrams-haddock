@@ -26,7 +26,7 @@ build-type:          Simple
 cabal-version:       1.18
 extra-source-files:  README.md, diagrams/*.svg
 extra-doc-files:     diagrams/*.svg, CHANGES.md
-tested-with:         GHC ==8.4.4 || ==8.6.5 || ==8.8.4 || ==8.10.7 || ==9.0.2 || ==9.2.8 || ==9.4.8 || ==9.6.3 || ==9.8.1
+tested-with:         GHC ==9.6.7 || ==9.8.4 || ==9.10.2 || ==9.12.2
 
 Source-repository head
   type: git
@@ -65,7 +65,7 @@ library
 Executable diagrams-haddock-svg
   main-is:             diagrams-haddock.hs
   other-modules:       Paths_diagrams_haddock
-  build-depends:       base,
+  build-depends:       base >= 4.18 && < 4.22,
                        Cabal,
                        cmdargs,
                        cpphs,
