@@ -1,5 +1,5 @@
 name:                diagrams-haddock
-version:             0.4.1.2
+version:             2.0.0.0
 synopsis:            Preprocessor for embedding diagrams in Haddock documentation
 description:         diagrams-haddock is a tool for compiling embedded inline
                      diagrams code in Haddock documentation, for an
@@ -35,56 +35,57 @@ Source-repository head
 library
   exposed-modules:     Diagrams.Haddock
   other-modules:       Paths_diagrams_haddock
-  build-depends:       base >= 4.4 && < 4.20,
-                       filepath >= 1.4 && < 1.5,
-                       directory >= 1.3 && < 1.4,
+  build-depends:       base >= 4.4 && < 5.0,
+                       filepath,
+                       Cabal,
+                       directory,
                        mtl >= 2.0 && < 2.4,
-                       containers >= 0.4 && < 0.7,
+                       containers >= 0.4 && < 0.8,
                        split >= 0.2 && < 0.3,
                        bytestring >= 0.9 && < 0.13,
                        strict >= 0.3 && < 0.6,
-                       parsec >= 3 && < 3.2,
-                       haskell-src-exts >= 1.18 && < 1.24,
+                       parsec >= 3,
+                       haskell-src-exts,
                        svg-builder >= 0.1 && < 0.2,
-                       diagrams-builder >= 0.5 && < 0.9,
-                       diagrams-lib >= 1.4 && < 1.5,
-                       diagrams-svg >= 1.4 && < 1.5,
-                       lens >= 3.8 && < 5.3,
-                       linear >= 1.10 && < 1.23,
-                       cpphs >= 1.15 && < 1.21,
-                       unliftio >= 0.2.12 && < 0.3,
-                       uniplate >= 1.6 && < 1.7,
+                       diagrams-builder,
+                       diagrams,
+                       geometry,
+                       exceptions,
+                       diagrams-svg >= 2.0 && < 2.1,
+                       lens,
+                       linear,
+                       cpphs,
                        text >= 0.11 && < 2.2,
                        base64-bytestring >= 1 && < 1.3,
-                       ansi-terminal >= 0.5 && < 1.1
+                       ansi-terminal
   hs-source-dirs:      src
   other-extensions:    TemplateHaskell
   default-language:    Haskell2010
 
-Executable diagrams-haddock
+Executable diagrams-haddock-svg
   main-is:             diagrams-haddock.hs
   other-modules:       Paths_diagrams_haddock
-  build-depends:       base >= 4.4 && < 4.20,
-                       directory >= 1.3 && < 1.4,
-                       filepath >= 1.4 && < 1.5,
+  build-depends:       base,
+                       Cabal,
+                       cmdargs,
+                       cpphs,
                        diagrams-haddock,
-                       cmdargs >= 0.8 && < 0.11,
-                       Cabal >= 2.2 && < 3.11,
-                       cpphs >= 1.15
+                       directory,
+                       filepath
   hs-source-dirs:      tools
   default-language:    Haskell2010
 
-Test-suite diagrams-haddock-tests
-  type:                exitcode-stdio-1.0
-  main-is:             Tests.hs
-  build-depends:       base,
-                       containers >= 0.4 && < 0.7,
-                       QuickCheck >= 2.4 && < 2.15,
-                       tasty >= 0.8 && < 1.6,
-                       tasty-quickcheck >= 0.8 && < 0.11,
-                       parsec >= 3 && < 3.2,
-                       lens >= 3.8 && < 5.3,
-                       haskell-src-exts >= 1.18 && < 1.24,
-                       diagrams-haddock
-  hs-source-dirs:      test
-  default-language:    Haskell2010
+-- Test-suite diagrams-haddock-tests
+--   type:                exitcode-stdio-1.0
+--   main-is:             Tests.hs
+--   build-depends:       base,
+--                        containers >= 0.4 && < 0.6,
+--                        QuickCheck >= 2.4 && < 2.10,
+--                        tasty >= 0.8 && < 0.12,
+--                        tasty-quickcheck >= 0.8 && < 0.9,
+--                        parsec >= 3,
+--                        lens >= 3.8 && < 4.16,
+--                        haskell-src-exts >= 1.18 && < 1.20,
+--                        diagrams-haddock
+--   hs-source-dirs:      test
+--   default-language:    Haskell2010

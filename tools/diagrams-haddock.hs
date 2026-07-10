@@ -1,10 +1,10 @@
-{-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TupleSections      #-}
 module Main where
 
 import           Control.Monad                      (forM_, when)
 import           Data.List                          (intercalate)
+import           Data.Version                       (showVersion)
 import           Diagrams.Haddock
 import           System.Console.CmdArgs
 import           System.Directory
@@ -16,21 +16,11 @@ import qualified Distribution.PackageDescription    as P
 import           Distribution.Simple.Configure      (maybeGetPersistBuildConfig)
 import           Distribution.Simple.LocalBuildInfo (localPkgDescr)
 import           Distribution.Simple.Utils          (cabalVersion)
-
-#if MIN_VERSION_Cabal(3,6,0)
 import           Distribution.Utils.Path            (getSymbolicPath)
-#endif
 
 import           Language.Preprocessor.Cpphs
 
 import           Paths_diagrams_haddock             (version)
-
-import qualified Data.Version                       as V
-import           Distribution.Types.Version         (Version)
-import           Distribution.Pretty                (prettyShow)
-
-------------------------------------------------------------
-------------------------------------------------------------
 
 data DiagramsHaddock
   = DiagramsHaddock
@@ -87,8 +77,8 @@ diagramsHaddockOpts
   }
   &= program "diagrams-haddock"
   &= summary (unlines
-       [ "diagrams-haddock v" ++ V.showVersion version ++ ", (c) 2013-2016 diagrams-haddock team (see LICENSE)"
-       , "compiled using version " ++ prettyShow cabalVersion ++ " of the Cabal library"
+       [ "diagrams-haddock v" ++ showVersion version ++ ", (c) 2013-2016 diagrams-haddock team (see LICENSE)"
+       , "compiled using version " ++ show cabalVersion ++ " of the Cabal library"
        , ""
        , "Compile inline diagrams code in Haddock documentation."
        , ""
@@ -144,7 +134,7 @@ processCabalPackage opts dir = do
       , "Either it does not exist or it is in the wrong format."
       , "* You may need to run 'cabal configure' first."
       , "* Make sure that the version of Cabal used to compile"
-      , "  diagrams-haddock (" ++ prettyShow cabalVersion ++ ") matches the version used"
+      , "  diagrams-haddock (" ++ show cabalVersion ++ ") matches the version used"
       , "  by the cabal tool."
       , "* Use the -d option if you want diagrams-haddock to look in"
       , "  a different dist directory."
@@ -155,21 +145,19 @@ processCabalPackage opts dir = do
         Nothing -> return ()
         Just lib -> do
           let buildInfo = P.libBuildInfo lib
-#if MIN_VERSION_Cabal(3,6,0)
               srcDirs   = map getSymbolicPath (P.hsSourceDirs buildInfo)
-#else
-              srcDirs   = P.hsSourceDirs buildInfo
-#endif
               incls     = P.includeDirs buildInfo
               defns     = P.cppOptions buildInfo
               opts' = opts
                     { includeDirs = includeDirs opts ++ incls
                     }
               cabalDefines = parseCabalDefines defns
-          mapM_ (tryProcessFile opts' cabalDefines dir srcDirs . toFilePath) . P.exposedModules $ lib
+          mapM_ (tryProcessFile opts' cabalDefines dir srcDirs) . map toFilePath . P.exposedModules $ lib
 
 getHsenv :: IO (Maybe String)
-getHsenv = lookup "HSENV_NAME" <$> getEnvironment
+getHsenv = do
+  env <- getEnvironment
+  return $ lookup "HSENV_NAME" env
 
 -- | Use @cpphs@'s options parser to handle the options from cabal.
 parseCabalDefines :: [String] -> [(String,String)]
